@@ -3,6 +3,7 @@ import cors from "cors";
 import { notFound, errorHandler } from "./middleware/error.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
 import tripRoutes from "./routes/trips.routes.js";
+import destinationRoutes from "./routes/destinations.routes.js";
 
 export function createApp() {
     const app = express();
@@ -22,6 +23,7 @@ export function createApp() {
     // Feature routers are mounted here as milestones are completed.
     app.use("/api/auth", authRoutes);
     app.use("/api/trips", tripRoutes);
+    app.use("/api/trips/:tripId/destinations", destinationRoutes);
 
     app.use(notFound);
     app.use(errorHandler);
