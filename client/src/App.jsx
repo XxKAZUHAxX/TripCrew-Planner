@@ -8,6 +8,7 @@ import Register from './pages/Register.jsx';
 import TripsList from './pages/TripsList.jsx';
 import TripDashboard from './pages/TripDashboard.jsx';
 import Join from './pages/Join.jsx';
+import VotePage from './pages/VotePage.jsx';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/trips" element={<ProtectedRoute><TripsList /></ProtectedRoute>} />
           <Route path="/join/:inviteCode" element={<ProtectedRoute><Join /></ProtectedRoute>} />
           <Route path="/trips/:tripId" element={<ProtectedRoute><TripDashboard /></ProtectedRoute>} />
+          <Route path="/trips/:tripId/vote" element={<ProtectedRoute><VotePage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
