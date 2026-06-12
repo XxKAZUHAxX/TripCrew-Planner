@@ -10,6 +10,7 @@ import TripDashboard from './pages/TripDashboard.jsx';
 import Join from './pages/Join.jsx';
 import VotePage from './pages/VotePage.jsx';
 import AvailabilityPage from './pages/AvailabilityPage.jsx';
+import WheelPage from './pages/WheelPage.jsx';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/trips/:tripId" element={<ProtectedRoute><TripDashboard /></ProtectedRoute>} />
           <Route path="/trips/:tripId/vote" element={<ProtectedRoute><VotePage /></ProtectedRoute>} />
           <Route path="/trips/:tripId/availability" element={<ProtectedRoute><AvailabilityPage /></ProtectedRoute>} />
+          <Route path="/trips/:tripId/wheel" element={<ProtectedRoute><WheelPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
