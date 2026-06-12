@@ -17,5 +17,8 @@
         "jsonwebtoken": "^9.0.2",
         "mongoose": "^8.5.1",
         "nanoid": "^5.0.7"
+    },
+    "devDependencies": {
+        "mongodb-memory-server": "^11.2.0"
     }
 }
