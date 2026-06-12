@@ -5,19 +5,9 @@ import NavBar from './components/NavBar.jsx';
 import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
-import { useAuth } from './hooks/useAuth.js';
-
-// Temporary authenticated landing; replaced by the full trips experience in
-// later milestones.
-function TripsPlaceholder() {
-  const { user } = useAuth();
-  return (
-    <div className="container py-5">
-      <h1 className="h3">Signed in as {user?.name}</h1>
-      <p className="text-muted">Trip management UI arrives in the next milestone.</p>
-    </div>
-  );
-}
+import TripsList from './pages/TripsList.jsx';
+import TripDashboard from './pages/TripDashboard.jsx';
+import Join from './pages/Join.jsx';
 
 export default function App() {
   return (
@@ -28,14 +18,9 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route
-            path="/trips"
-            element={
-              <ProtectedRoute>
-                <TripsPlaceholder />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/trips" element={<ProtectedRoute><TripsList /></ProtectedRoute>} />
+          <Route path="/join/:inviteCode" element={<ProtectedRoute><Join /></ProtectedRoute>} />
+          <Route path="/trips/:tripId" element={<ProtectedRoute><TripDashboard /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
