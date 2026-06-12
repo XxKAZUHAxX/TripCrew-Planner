@@ -6,6 +6,7 @@ import tripRoutes from "./routes/trips.routes.js";
 import destinationRoutes from "./routes/destinations.routes.js";
 import voteRoutes from "./routes/votes.routes.js";
 import archetypeRoutes from "./routes/archetypes.routes.js";
+import availabilityRoutes from "./routes/availability.routes.js";
 
 export function createApp() {
     const app = express();
@@ -28,6 +29,7 @@ export function createApp() {
     app.use("/api/trips/:tripId/destinations", destinationRoutes);
     app.use("/api/trips/:tripId", voteRoutes);
     app.use("/api/trips/:tripId", archetypeRoutes);
+    app.use("/api/trips/:tripId/availability", availabilityRoutes);
 
     app.use(notFound);
     app.use(errorHandler);
