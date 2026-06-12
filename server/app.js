@@ -8,6 +8,7 @@ import voteRoutes from "./routes/votes.routes.js";
 import archetypeRoutes from "./routes/archetypes.routes.js";
 import availabilityRoutes from "./routes/availability.routes.js";
 import wheelRoutes from "./routes/wheel.routes.js";
+import playbookRoutes from "./routes/playbook.routes.js";
 
 export function createApp() {
     const app = express();
@@ -32,6 +33,7 @@ export function createApp() {
     app.use("/api/trips/:tripId", archetypeRoutes);
     app.use("/api/trips/:tripId/availability", availabilityRoutes);
     app.use("/api/trips/:tripId/wheel", wheelRoutes);
+    app.use("/api/trips/:tripId/playbook", playbookRoutes);
 
     app.use(notFound);
     app.use(errorHandler);
