@@ -1,4 +1,4 @@
-export default function Legend({ memberCount }) {
+export default function Legend() {
   const steps = [
     { color: '#ffffff', label: '0' },
     { color: '#C0DD97', label: '1' },

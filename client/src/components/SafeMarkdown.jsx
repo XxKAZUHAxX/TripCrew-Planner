@@ -20,7 +20,6 @@ export default function SafeMarkdown({ content }) {
     <div
       className="markdown-body"
       // Safe: sanitized by DOMPurify immediately above.
-      // eslint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{ __html: sanitized }}
     />
   );

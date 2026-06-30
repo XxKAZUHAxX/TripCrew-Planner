@@ -1,4 +1,3 @@
-import { useEffect, useCallback } from 'react';
 import DateCell from './DateCell.jsx';
 import Legend from './Legend.jsx';
 import { buildMonthCells, MONTH_NAMES, WEEKDAY_LABELS } from '../utils/dateKeys.js';
@@ -11,7 +10,6 @@ export default function CalendarGrid({
   monthIndex,
   heatmap,
   myDates,
-  dragState,
   onMouseDown,
   onMouseEnter,
 }) {

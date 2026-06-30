@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   getPlaybook,
   updateInstructions,
@@ -16,7 +16,6 @@ import Checklist from '../components/Checklist.jsx';
 export default function PlaybookPage() {
   const { tripId } = useParams();
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const [instructions, setInstructions] = useState('');
   const [winningDest, setWinningDest] = useState(null);
