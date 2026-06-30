@@ -2,14 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import type { ScoredDestination } from '@tripcrew/shared';
 
 const SLICE_COLORS = [
-    '#4e79a7',
-    '#f28e2b',
-    '#e15759',
-    '#76b7b2',
-    '#59a14f',
-    '#edc948',
-    '#b07aa1',
-    '#ff9da7',
+    '#0d9488',
+    '#f59e0b',
+    '#e11d48',
+    '#3b82f6',
+    '#16a34a',
+    '#a855f7',
+    '#fb7185',
+    '#14b8a6',
 ];
 
 interface WheelCanvasProps {

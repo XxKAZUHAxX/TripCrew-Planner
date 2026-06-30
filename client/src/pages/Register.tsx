@@ -1,7 +1,7 @@
 import { useNavigate, Link } from 'react-router-dom';
 import type { LoginRequest, RegisterRequest } from '@tripcrew/shared';
-import AuthForm from '../components/AuthForm';
-import { useAuth } from '../hooks/useAuth';
+import AuthForm from '@/components/AuthForm';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Register() {
     const { register } = useAuth();
@@ -13,10 +13,13 @@ export default function Register() {
     }
 
     return (
-        <div className="container py-5 d-flex flex-column align-items-center">
+        <div className="mx-auto flex max-w-md flex-col items-center px-4 py-16">
             <AuthForm mode="register" onSubmit={handleSubmit} />
-            <p className="mt-3">
-                Already have an account? <Link to="/login">Login</Link>
+            <p className="mt-4 text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <Link className="font-medium text-primary hover:underline" to="/login">
+                    Login
+                </Link>
             </p>
         </div>
     );

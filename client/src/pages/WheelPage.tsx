@@ -1,14 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import type { Destination, ScoredDestination, SpinResponse } from '@tripcrew/shared';
-import { getWheelStatus, spinWheel } from '../api/wheel.api';
-import { getTrip } from '../api/trips.api';
-import { useAuth } from '../hooks/useAuth';
-import { getErrorMessage } from '../utils/errors';
-import { refId } from '../utils/refs';
-import WheelCanvas from '../components/WheelCanvas';
-import WinnerBanner from '../components/WinnerBanner';
-import ChaosButton from '../components/ChaosButton';
+import { getWheelStatus, spinWheel } from '@/api/wheel.api';
+import { getTrip } from '@/api/trips.api';
+import { useAuth } from '@/hooks/useAuth';
+import { getErrorMessage } from '@/utils/errors';
+import { refId } from '@/utils/refs';
+import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent } from '@/components/ui/card';
+import { PageLoader } from '@/components/ui/spinner';
+import WheelCanvas from '@/components/WheelCanvas';
+import WinnerBanner from '@/components/WinnerBanner';
+import ChaosButton from '@/components/ChaosButton';
 
 type Phase = 'idle' | 'spinning' | 'landed' | 'finalized';
 type Winner = SpinResponse | Destination | string | null;
@@ -86,42 +92,56 @@ export default function WheelPage() {
         setTimeout(() => setPhase('finalized'), 800);
     }
 
-    if (loading) return <div className="container py-5">Loading…</div>;
+    if (loading) return <PageLoader />;
 
     return (
-        <div className="container py-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-                <h1 className="h3 mb-0">Wheel of Destiny</h1>
-                <Link className="btn btn-outline-secondary btn-sm" to={`/trips/${tripId}`}>
-                    ← Back
+        <div className="mx-auto max-w-2xl px-4 py-8">
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <h1 className="text-2xl font-bold">Wheel of Destiny</h1>
+                <Link
+                    className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+                    to={`/trips/${tripId}`}
+                >
+                    <ArrowLeft className="size-4" />
+                    Back
                 </Link>
             </div>
-            {error && <div className="alert alert-danger">{error}</div>}
-
-            {slices.length > 0 ? (
-                <WheelCanvas
-                    slices={slices}
-                    winnerIndex={winnerIndex}
-                    spinning={phase === 'spinning'}
-                    onSpinEnd={handleSpinEnd}
-                />
-            ) : (
-                <p className="text-muted text-center">No destinations to show on the wheel yet.</p>
+            {error && (
+                <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
             )}
 
-            <ChaosButton
-                eligible={eligible}
-                isCreator={isCreator}
-                onSpin={handleSpin}
-                spinning={phase === 'spinning'}
-            />
+            <Card>
+                <CardContent className="py-8">
+                    {slices.length > 0 ? (
+                        <WheelCanvas
+                            slices={slices}
+                            winnerIndex={winnerIndex}
+                            spinning={phase === 'spinning'}
+                            onSpinEnd={handleSpinEnd}
+                        />
+                    ) : (
+                        <p className="text-center text-sm text-muted-foreground">
+                            No destinations to show on the wheel yet.
+                        </p>
+                    )}
 
-            {phase === 'finalized' && winner && (
-                <WinnerBanner
-                    destination={resolveWinner(winner, slices)}
-                    onClose={() => navigate(`/trips/${tripId}/playbook`)}
-                />
-            )}
+                    <ChaosButton
+                        eligible={eligible}
+                        isCreator={isCreator}
+                        onSpin={handleSpin}
+                        spinning={phase === 'spinning'}
+                    />
+
+                    {phase === 'finalized' && winner && (
+                        <WinnerBanner
+                            destination={resolveWinner(winner, slices)}
+                            onClose={() => navigate(`/trips/${tripId}/playbook`)}
+                        />
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 }

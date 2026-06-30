@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, Check } from 'lucide-react';
 import type { Destination, ScoredDestination } from '@tripcrew/shared';
-import { getMyVote, submitVote, getTally } from '../api/votes.api';
-import { listDestinations } from '../api/destinations.api';
-import { getErrorMessage } from '../utils/errors';
-import RankableList from '../components/RankableList';
-import ScoreBoard from '../components/ScoreBoard';
+import { getMyVote, submitVote, getTally } from '@/api/votes.api';
+import { listDestinations } from '@/api/destinations.api';
+import { getErrorMessage } from '@/utils/errors';
+import { cn } from '@/lib/utils';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageLoader } from '@/components/ui/spinner';
+import RankableList from '@/components/RankableList';
+import ScoreBoard from '@/components/ScoreBoard';
 
 export default function VotePage() {
     const { tripId } = useParams() as { tripId: string };
@@ -54,8 +60,7 @@ export default function VotePage() {
         setError(null);
         try {
             await submitVote(tripId, rankedIds);
-            const tally = await getTally(tripId);
-            setScores(tally);
+            setScores(await getTally(tripId));
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
         } catch (err) {
@@ -65,21 +70,31 @@ export default function VotePage() {
         }
     }
 
-    if (loading) return <div className="container py-5">Loading…</div>;
+    if (loading) return <PageLoader />;
 
     return (
-        <div className="container py-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-                <h1 className="h3 mb-0">Cast your vote</h1>
-                <Link className="btn btn-outline-secondary btn-sm" to={`/trips/${tripId}`}>
-                    ← Back
+        <div className="mx-auto max-w-5xl px-4 py-8">
+            <div className="mb-5 flex items-center justify-between gap-3">
+                <h1 className="text-2xl font-bold">Cast your vote</h1>
+                <Link
+                    className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+                    to={`/trips/${tripId}`}
+                >
+                    <ArrowLeft className="size-4" />
+                    Back
                 </Link>
             </div>
-            {error && <div className="alert alert-danger">{error}</div>}
-            <div className="row g-4">
-                <div className="col-md-7">
+            {error && (
+                <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
+            <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+                <div>
                     {destinations.length === 0 ? (
-                        <p className="text-muted">No destinations to rank yet.</p>
+                        <p className="text-sm text-muted-foreground">
+                            No destinations to rank yet.
+                        </p>
                     ) : (
                         <RankableList
                             ranked={ranked}
@@ -87,19 +102,29 @@ export default function VotePage() {
                             onRankingChange={setRankedIds}
                         />
                     )}
-                    <div className="mt-3">
-                        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                    <div className="mt-4 flex items-center gap-3">
+                        <Button onClick={handleSave} disabled={saving}>
                             {saving ? 'Saving…' : 'Save vote'}
-                        </button>
-                        {saved && <span className="text-success ms-3">Vote saved!</span>}
+                        </Button>
+                        {saved && (
+                            <span className="flex items-center gap-1 text-sm text-success">
+                                <Check className="size-4" />
+                                Vote saved!
+                            </span>
+                        )}
                     </div>
                 </div>
-                <div className="col-md-5">
-                    <ScoreBoard scores={scores} />
-                    <p className="text-muted small mt-2">
-                        Scores update after you save. Others&apos; scores reflect their saved votes.
-                    </p>
-                </div>
+                <Card className="h-fit">
+                    <CardHeader>
+                        <CardTitle className="text-base">Live scores (Borda count)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ScoreBoard scores={scores} />
+                        <p className="mt-3 text-xs text-muted-foreground">
+                            Scores update after you save. Others’ scores reflect their saved votes.
+                        </p>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

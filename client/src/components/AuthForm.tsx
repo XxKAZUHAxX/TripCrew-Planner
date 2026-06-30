@@ -1,6 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import type { LoginRequest, RegisterRequest } from '@tripcrew/shared';
-import { getErrorMessage } from '../utils/errors';
+import { getErrorMessage } from '@/utils/errors';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export type AuthMode = 'login' | 'register';
 export type AuthSubmit = (payload: LoginRequest | RegisterRequest) => Promise<void>;
@@ -33,44 +38,61 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="card p-4 shadow-sm" style={{ maxWidth: 420 }}>
-            <h2 className="h4 mb-3">{isRegister ? 'Create your account' : 'Welcome back'}</h2>
-            {error && <div className="alert alert-danger py-2">{error}</div>}
-            {isRegister && (
-                <div className="mb-3">
-                    <label className="form-label">Name</label>
-                    <input
-                        className="form-control"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                    />
-                </div>
-            )}
-            <div className="mb-3">
-                <label className="form-label">Email</label>
-                <input
-                    type="email"
-                    className="form-control"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                />
-            </div>
-            <div className="mb-3">
-                <label className="form-label">Password</label>
-                <input
-                    type="password"
-                    className="form-control"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                />
-            </div>
-            <button className="btn btn-primary w-100" disabled={submitting}>
-                {submitting ? 'Please wait…' : isRegister ? 'Sign up' : 'Login'}
-            </button>
-        </form>
+        <Card className="w-full max-w-md">
+            <CardHeader>
+                <CardTitle className="text-2xl">
+                    {isRegister ? 'Create your account' : 'Welcome back'}
+                </CardTitle>
+                <CardDescription>
+                    {isRegister
+                        ? 'Start planning trips your whole crew will love.'
+                        : 'Log in to pick up where your crew left off.'}
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {error && (
+                        <Alert variant="destructive">
+                            <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                    )}
+                    {isRegister && (
+                        <div className="space-y-1.5">
+                            <Label htmlFor="name">Name</Label>
+                            <Input
+                                id="name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                            />
+                        </div>
+                    )}
+                    <div className="space-y-1.5">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            minLength={6}
+                        />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={submitting}>
+                        {submitting ? 'Please wait…' : isRegister ? 'Sign up' : 'Login'}
+                    </Button>
+                </form>
+            </CardContent>
+        </Card>
     );
 }

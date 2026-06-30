@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { joinTrip } from '../api/trips.api';
-import { getErrorMessage } from '../utils/errors';
+import { Ticket } from 'lucide-react';
+import { joinTrip } from '@/api/trips.api';
+import { getErrorMessage } from '@/utils/errors';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Join() {
     const { inviteCode } = useParams() as { inviteCode: string };
@@ -23,17 +27,32 @@ export default function Join() {
     }
 
     return (
-        <div className="container py-5 text-center">
-            <div className="card p-4 shadow-sm mx-auto" style={{ maxWidth: 480 }}>
-                <h1 className="h4">Join a trip</h1>
-                <p className="text-muted">
-                    You were invited with code <code>{inviteCode}</code>.
-                </p>
-                {error && <div className="alert alert-danger">{error}</div>}
-                <button className="btn btn-primary" onClick={handleJoin} disabled={joining}>
-                    {joining ? 'Joining…' : 'Join this trip'}
-                </button>
-            </div>
+        <div className="mx-auto max-w-md px-4 py-16">
+            <Card>
+                <CardHeader className="items-center text-center">
+                    <span className="mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Ticket className="size-6" />
+                    </span>
+                    <CardTitle>Join a trip</CardTitle>
+                    <CardDescription>
+                        You were invited with code{' '}
+                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono">
+                            {inviteCode}
+                        </code>
+                        .
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {error && (
+                        <Alert variant="destructive">
+                            <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                    )}
+                    <Button className="w-full" onClick={handleJoin} disabled={joining}>
+                        {joining ? 'Joining…' : 'Join this trip'}
+                    </Button>
+                </CardContent>
+            </Card>
         </div>
     );
 }

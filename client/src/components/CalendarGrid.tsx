@@ -1,7 +1,7 @@
 import type { Heatmap } from '@tripcrew/shared';
+import { buildMonthCells, MONTH_NAMES, WEEKDAY_LABELS } from '@/utils/dateKeys';
 import DateCell from './DateCell';
 import Legend from './Legend';
-import { buildMonthCells, MONTH_NAMES, WEEKDAY_LABELS } from '../utils/dateKeys';
 
 interface CalendarGridProps {
     year: number;
@@ -23,13 +23,16 @@ export default function CalendarGrid({
     const cells = buildMonthCells(year, monthIndex);
 
     return (
-        <div className="mb-4">
-            <h3 className="h6 text-muted mb-1">
+        <div className="mb-6">
+            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
                 {MONTH_NAMES[monthIndex]} {year}
             </h3>
-            <div className="heatmap-grid mb-1">
+            <div className="grid select-none grid-cols-7 gap-1">
                 {WEEKDAY_LABELS.map((d) => (
-                    <div key={d} className="text-center small text-muted fw-semibold">
+                    <div
+                        key={d}
+                        className="text-center text-xs font-semibold text-muted-foreground"
+                    >
                         {d}
                     </div>
                 ))}

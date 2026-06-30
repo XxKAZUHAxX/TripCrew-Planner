@@ -11,16 +11,16 @@
 7. [Running the Backend Smoke Tests](#7-running-the-backend-smoke-tests)
 8. [API Reference](#8-api-reference)
 9. [Feature Guides](#9-feature-guides)
-   - [9.1 Authentication](#91-authentication)
-   - [9.2 Creating & Managing Trips](#92-creating--managing-trips)
-   - [9.3 Inviting Members](#93-inviting-members)
-   - [9.4 Proposing Destinations](#94-proposing-destinations)
-   - [9.5 Voting (Borda Count)](#95-voting-borda-count)
-   - [9.6 Trip Dashboard & Live Scores](#96-trip-dashboard--live-scores)
-   - [9.7 Archetype Badges](#97-archetype-badges)
-   - [9.8 Availability Heatmap](#98-availability-heatmap)
-   - [9.9 Wheel of Destiny (Deadlock Breaker)](#99-wheel-of-destiny-deadlock-breaker)
-   - [9.10 Trip Playbook](#910-trip-playbook)
+    - [9.1 Authentication](#91-authentication)
+    - [9.2 Creating & Managing Trips](#92-creating--managing-trips)
+    - [9.3 Inviting Members](#93-inviting-members)
+    - [9.4 Proposing Destinations](#94-proposing-destinations)
+    - [9.5 Voting (Borda Count)](#95-voting-borda-count)
+    - [9.6 Trip Dashboard & Live Scores](#96-trip-dashboard--live-scores)
+    - [9.7 Archetype Badges](#97-archetype-badges)
+    - [9.8 Availability Heatmap](#98-availability-heatmap)
+    - [9.9 Wheel of Destiny (Deadlock Breaker)](#99-wheel-of-destiny-deadlock-breaker)
+    - [9.10 Trip Playbook](#910-trip-playbook)
 10. [Authorization Rules](#10-authorization-rules)
 11. [Frontend Page Map](#11-frontend-page-map)
 12. [Codebase Walkthrough](#12-codebase-walkthrough)
@@ -45,15 +45,18 @@ TripCrew is a **group trip planning web application**. It solves the real-world 
 
 ## 2. Tech Stack
 
-| Layer        | Technology                                  |
-|--------------|---------------------------------------------|
-| Frontend     | React 18 (Vite), Bootstrap 5                |
-| Backend      | Node.js 18+, Express 4                      |
-| Database     | MongoDB (Mongoose ODM)                      |
-| Auth         | JWT (jsonwebtoken) + bcrypt (bcryptjs)      |
-| Invite codes | nanoid                                       |
-| Date logic   | date-fns                                    |
-| Markdown     | marked + DOMPurify (XSS sanitization)       |
+| Layer        | Technology                                               |
+| ------------ | -------------------------------------------------------- |
+| Language     | TypeScript (strict) across client, server and shared     |
+| Frontend     | React 18 (Vite), Tailwind CSS v4 + shadcn-style UI kit   |
+| Backend      | Node.js 18+, Express 4 (run via `tsx`, built with `tsc`) |
+| Database     | MongoDB (Mongoose ODM)                                   |
+| Shared types | `@tripcrew/shared` — domain & API contracts (types-only) |
+| Auth         | JWT (jsonwebtoken) + bcrypt (bcryptjs)                   |
+| Invite codes | nanoid                                                   |
+| Date logic   | date-fns                                                 |
+| Markdown     | marked + DOMPurify (XSS sanitization)                    |
+| Tooling      | Vitest, ESLint, Prettier                                 |
 
 ---
 
@@ -66,128 +69,151 @@ tripcrew/
 ├── DOCUMENTATION.md          ← you are here
 ├── tripcrew_agent_prompt.md  ← original product brief
 │
-├── client/                   React Vite app
+├── shared/                   @tripcrew/shared — types-only package (import type only)
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── src/
+│       ├── domain.ts         Wire-shape domain types + unions
+│       ├── api.ts            Request/response contracts for every endpoint
+│       └── index.ts          Barrel re-export
+│
+├── client/                   React + Vite + TypeScript app
 │   ├── index.html
-│   ├── vite.config.js
+│   ├── vite.config.js        Vite + Tailwind plugin + `@` alias
+│   ├── tsconfig.json
+│   ├── vitest.config.ts
+│   ├── eslint.config.js
 │   ├── package.json
 │   ├── .env                  ← copy of .env.example; fill in values
 │   ├── .env.example
 │   └── src/
-│       ├── main.jsx          Entry point
-│       ├── App.jsx           Router + AuthProvider
-│       ├── index.css         Global styles (heatmap, wheel CSS)
-│       ├── api/              All API call functions (never call axios directly in components)
-│       │   ├── axiosInstance.js   Axios singleton + JWT interceptor
-│       │   ├── auth.api.js
-│       │   ├── trips.api.js
-│       │   ├── destinations.api.js
-│       │   ├── votes.api.js
-│       │   ├── availability.api.js
-│       │   ├── wheel.api.js
-│       │   ├── archetypes.api.js
-│       │   └── playbook.api.js
+│       ├── main.tsx          Entry point
+│       ├── App.tsx           Router + AuthProvider
+│       ├── index.css         Tailwind + design tokens (theme, wheel, markdown)
+│       ├── lib/
+│       │   └── utils.ts      cn() class-merge helper
+│       ├── api/              Typed API layer (never call axios directly in components)
+│       │   ├── axiosInstance.ts   Axios singleton + JWT interceptor
+│       │   ├── auth.api.ts
+│       │   ├── trips.api.ts
+│       │   ├── destinations.api.ts
+│       │   ├── votes.api.ts
+│       │   ├── availability.api.ts
+│       │   ├── wheel.api.ts
+│       │   ├── archetypes.api.ts
+│       │   └── playbook.api.ts
 │       ├── context/
-│       │   └── AuthContext.jsx    User + token state; login/logout/register
+│       │   └── AuthContext.tsx    User + token state; login/logout/register
 │       ├── hooks/
-│       │   └── useAuth.js         Consumes AuthContext
+│       │   └── useAuth.ts         Consumes AuthContext
 │       ├── components/
-│       │   ├── ProtectedRoute.jsx  Redirects unauthenticated users to /login
-│       │   ├── NavBar.jsx
-│       │   ├── AuthForm.jsx
-│       │   ├── MembersList.jsx     Members + badge chips
-│       │   ├── BadgeChip.jsx       Colored badge with tooltip
-│       │   ├── DestinationList.jsx Propose + list destinations
-│       │   ├── DestinationCard.jsx Single destination with remove button
-│       │   ├── ScoreBoard.jsx      Borda score progress bars
-│       │   ├── ChaosButton.jsx     Wheel trigger (creator-only)
-│       │   ├── RankableList.jsx    Drag-to-rank vote list (move up/down)
-│       │   ├── CalendarGrid.jsx    Month calendar with heatmap overlay
-│       │   ├── DateCell.jsx        Single calendar cell
-│       │   ├── Legend.jsx          Heatmap color scale key
-│       │   ├── WheelCanvas.jsx     Canvas wheel + CSS spin animation
-│       │   ├── WinnerBanner.jsx    Post-spin celebratory banner
-│       │   ├── SafeMarkdown.jsx    Markdown renderer (DOMPurify-sanitized)
-│       │   ├── MarkdownEditor.jsx  Creator's textarea for instructions
-│       │   ├── Checklist.jsx       Shared task list with per-member state
-│       │   └── TaskRow.jsx         Single checklist row
+│       │   ├── ui/                shadcn-style primitives (button, card, input,
+│       │   │                      label, textarea, badge, alert, skeleton, spinner)
+│       │   ├── ProtectedRoute.tsx  Redirects unauthenticated users to /login
+│       │   ├── NavBar.tsx
+│       │   ├── AuthForm.tsx
+│       │   ├── MembersList.tsx     Members + badge chips
+│       │   ├── BadgeChip.tsx       Colored badge with tooltip
+│       │   ├── DestinationList.tsx Propose + list destinations
+│       │   ├── DestinationCard.tsx Single destination with remove button
+│       │   ├── ScoreBoard.tsx      Borda score progress bars
+│       │   ├── ChaosButton.tsx     Wheel trigger (creator-only)
+│       │   ├── RankableList.tsx    Re-rank vote list (move up/down)
+│       │   ├── CalendarGrid.tsx    Month calendar with heatmap overlay
+│       │   ├── DateCell.tsx        Single calendar cell
+│       │   ├── Legend.tsx          Heatmap color scale key
+│       │   ├── WheelCanvas.tsx     Canvas wheel + CSS spin animation
+│       │   ├── WinnerBanner.tsx    Post-spin celebratory banner
+│       │   ├── SafeMarkdown.tsx    Markdown renderer (DOMPurify-sanitized)
+│       │   ├── MarkdownEditor.tsx  Creator's textarea for instructions
+│       │   ├── Checklist.tsx       Shared task list with per-member state
+│       │   └── TaskRow.tsx         Single checklist row
 │       ├── pages/
-│       │   ├── Landing.jsx
-│       │   ├── Login.jsx
-│       │   ├── Register.jsx
-│       │   ├── TripsList.jsx
-│       │   ├── Join.jsx
-│       │   ├── TripDashboard.jsx
-│       │   ├── VotePage.jsx
-│       │   ├── AvailabilityPage.jsx
-│       │   ├── WheelPage.jsx
-│       │   └── PlaybookPage.jsx
+│       │   ├── Landing.tsx
+│       │   ├── Login.tsx
+│       │   ├── Register.tsx
+│       │   ├── TripsList.tsx
+│       │   ├── Join.tsx
+│       │   ├── TripDashboard.tsx
+│       │   ├── VotePage.tsx
+│       │   ├── AvailabilityPage.tsx
+│       │   ├── WheelPage.tsx
+│       │   └── PlaybookPage.tsx
 │       └── utils/
-│           ├── colorScale.js   Heatmap count → hex color
-│           ├── dateKeys.js     UTC date utilities + month grid builder
-│           └── borda.js        Client-side Borda point helper
+│           ├── colorScale.ts   Heatmap count → hex color
+│           ├── dateKeys.ts     UTC date utilities + month grid builder
+│           ├── borda.ts        Client-side Borda point helper
+│           ├── errors.ts       getErrorMessage (typed Axios errors)
+│           └── refs.ts         refId (populated-vs-id duality)
 │
-└── server/                   Express API
-    ├── server.js             Entry point (boots DB + app)
-    ├── app.js                Express factory (mounts all routers)
+└── server/                   Express + TypeScript API
+    ├── server.ts             Entry point (boots DB + app)
+    ├── app.ts                Express factory (mounts all routers)
+    ├── tsconfig.json
+    ├── tsconfig.build.json    Build config (emits dist/, excludes tests)
+    ├── vitest.config.ts
+    ├── eslint.config.js
     ├── package.json
     ├── .env                  ← copy of .env.example; fill in values
     ├── .env.example
+    ├── types/
+    │   └── express.d.ts      Request augmentation (req.user, req.trip)
     ├── config/
-    │   └── db.js             Mongoose connection
+    │   └── db.ts             Mongoose connection
     ├── models/
-    │   ├── User.js
-    │   ├── Trip.js           (includes checklistTemplates sub-docs)
-    │   ├── Destination.js
-    │   ├── Vote.js
-    │   └── Availability.js
+    │   ├── User.ts
+    │   ├── Trip.ts           (includes checklistTemplates sub-docs)
+    │   ├── Destination.ts
+    │   ├── Vote.ts
+    │   └── Availability.ts
     ├── middleware/
-    │   ├── auth.middleware.js    requireAuth, issueToken
-    │   ├── trip.middleware.js    requireMembership, requireCreator, requireDecided
-    │   └── error.middleware.js   notFound, errorHandler
+    │   ├── auth.middleware.ts    requireAuth, issueToken
+    │   ├── trip.middleware.ts    requireMembership, requireCreator, requireDecided
+    │   └── error.middleware.ts   notFound, errorHandler
     ├── controllers/
-    │   ├── auth.controller.js
-    │   ├── trips.controller.js
-    │   ├── destinations.controller.js
-    │   ├── votes.controller.js
-    │   ├── availability.controller.js
-    │   ├── wheel.controller.js
-    │   ├── archetypes.controller.js
-    │   └── playbook.controller.js
+    │   ├── auth.controller.ts
+    │   ├── trips.controller.ts
+    │   ├── destinations.controller.ts
+    │   ├── votes.controller.ts
+    │   ├── availability.controller.ts
+    │   ├── wheel.controller.ts
+    │   ├── archetypes.controller.ts
+    │   └── playbook.controller.ts
     ├── routes/
-    │   ├── auth.routes.js
-    │   ├── trips.routes.js
-    │   ├── destinations.routes.js
-    │   ├── votes.routes.js
-    │   ├── availability.routes.js
-    │   ├── wheel.routes.js
-    │   ├── archetypes.routes.js
-    │   └── playbook.routes.js
+    │   ├── auth.routes.ts
+    │   ├── trips.routes.ts
+    │   ├── destinations.routes.ts
+    │   ├── votes.routes.ts
+    │   ├── availability.routes.ts
+    │   ├── wheel.routes.ts
+    │   ├── archetypes.routes.ts
+    │   └── playbook.routes.ts
     ├── utils/
-    │   ├── borda.js        computeBordaScores, rankByScore
-    │   ├── deadlock.js     evaluateDeadlock
-    │   └── archetypes.js   computeArchetypes, ARCHETYPES definitions
-    └── smoke/              Backend integration tests (no test runner needed)
-        ├── harness.js
-        ├── auth.smoke.js
-        ├── trips.smoke.js
-        ├── destinations.smoke.js
-        ├── votes.smoke.js
-        ├── dashboard.smoke.js
-        ├── availability.smoke.js
-        ├── wheel.smoke.js
-        └── playbook.smoke.js
+    │   ├── borda.ts        computeBordaScores, rankByScore
+    │   ├── deadlock.ts     evaluateDeadlock
+    │   └── archetypes.ts   computeArchetypes, ARCHETYPES definitions
+    └── smoke/              Vitest integration suites (in-memory MongoDB)
+        ├── harness.ts
+        ├── auth.smoke.test.ts
+        ├── trips.smoke.test.ts
+        ├── destinations.smoke.test.ts
+        ├── votes.smoke.test.ts
+        ├── dashboard.smoke.test.ts
+        ├── availability.smoke.test.ts
+        ├── wheel.smoke.test.ts
+        └── playbook.smoke.test.ts
 ```
 
 ---
 
 ## 4. Prerequisites
 
-| Requirement     | Version | Notes                                      |
-|-----------------|---------|--------------------------------------------|
-| Node.js         | 18+     | v24 used during development                |
-| npm             | 9+      | Comes with Node                            |
-| MongoDB         | 6+      | Local install **or** MongoDB Atlas (free)  |
-| A modern browser| —       | Chrome, Firefox, Edge — canvas required for Wheel |
+| Requirement      | Version | Notes                                             |
+| ---------------- | ------- | ------------------------------------------------- |
+| Node.js          | 18+     | v24 used during development                       |
+| npm              | 9+      | Comes with Node                                   |
+| MongoDB          | 6+      | Local install **or** MongoDB Atlas (free)         |
+| A modern browser | —       | Chrome, Firefox, Edge — canvas required for Wheel |
 
 > **No Docker required.** The smoke tests use an in-memory MongoDB so you can run the full test suite without any running database.
 
@@ -209,12 +235,13 @@ CLIENT_ORIGIN=http://localhost:5173
 
 **`MONGODB_URI` examples:**
 
-| Setup              | Example URI                                                   |
-|--------------------|---------------------------------------------------------------|
-| Local MongoDB      | `mongodb://127.0.0.1:27017/tripcrew`                          |
-| MongoDB Atlas      | `mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/tripcrew` |
+| Setup         | Example URI                                                   |
+| ------------- | ------------------------------------------------------------- |
+| Local MongoDB | `mongodb://127.0.0.1:27017/tripcrew`                          |
+| MongoDB Atlas | `mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/tripcrew` |
 
 **`JWT_SECRET`** — generate a strong secret:
+
 ```powershell
 # PowerShell
 [System.Web.Security.Membership]::GeneratePassword(48, 8)
@@ -243,17 +270,19 @@ Open **two terminal windows** — one for the server, one for the client.
 
 ```powershell
 cd "D:\Projects\TripCrew Planner\server"
-npm install          # first time only
-npm run dev          # starts on http://localhost:5000 with --watch (auto-restart)
+npm install          # first time only (also links the local @tripcrew/shared package)
+npm run dev          # starts on http://localhost:5000 (tsx watch, auto-restart on save)
 ```
 
 Expected output:
+
 ```
 MongoDB connected
 Server listening on http://localhost:5000
 ```
 
 Verify it works:
+
 ```powershell
 Invoke-RestMethod http://localhost:5000/api/health
 # → { status: "ok", time: "2026-06-12T..." }
@@ -268,6 +297,7 @@ npm run dev          # starts on http://localhost:5173
 ```
 
 Expected output:
+
 ```
   VITE v5.x  ready in xxx ms
   ➜  Local:   http://localhost:5173/
@@ -278,37 +308,42 @@ Open your browser at **http://localhost:5173** and you should see the TripCrew l
 ### Production build
 
 ```powershell
+# Client → static assets in client/dist/
 cd client
 npm run build        # outputs to client/dist/
 npm run preview      # serves the production build locally on :4173
+
+# Server → compiled JavaScript in server/dist/
+cd ../server
+npm run build        # tsc -> server/dist/
+npm start            # node dist/server.js
 ```
+
+> The `@tripcrew/shared` package is **types-only** — its types are erased at
+> compile time, so nothing from it ends up in either bundle.
 
 ---
 
-## 7. Running the Backend Smoke Tests
+## 7. Running the Tests
 
-The smoke tests use an **in-memory MongoDB** (no running database needed) and test every API route end-to-end. They run with plain Node — no test runner to install.
+Both packages use **Vitest**. The server suites are integration ('smoke') tests
+that boot the real Express app against an **in-memory MongoDB** (no running
+database needed) and exercise every API route end-to-end.
 
 ```powershell
+# Backend integration suites
 cd "D:\Projects\TripCrew Planner\server"
+npm test             # runs every smoke/*.smoke.test.ts suite
+npm run test:watch   # watch mode
 
-# Run a single suite
-node smoke/auth.smoke.js
-
-# Run the full suite
-node smoke/auth.smoke.js
-node smoke/trips.smoke.js
-node smoke/destinations.smoke.js
-node smoke/votes.smoke.js
-node smoke/dashboard.smoke.js
-node smoke/availability.smoke.js
-node smoke/wheel.smoke.js
-node smoke/playbook.smoke.js
+# Frontend unit/component tests (Vitest + Testing Library)
+cd "D:\Projects\TripCrew Planner\client"
+npm test
 ```
 
-Each test prints `ok: <description>` for passing assertions and `FAIL: <description>` for failures. The process exits with code `1` if any assertion fails.
+Vitest exits with a non-zero code if any assertion fails.
 
-All 62 assertions should pass on a clean install.
+All suites should pass on a clean install.
 
 ---
 
@@ -317,6 +352,7 @@ All 62 assertions should pass on a clean install.
 All routes are prefixed with `/api`. The server runs on port `5000` by default.
 
 **Authentication header:**
+
 ```
 Authorization: Bearer <jwt_token>
 ```
@@ -325,27 +361,28 @@ Authorization: Bearer <jwt_token>
 
 ### Auth — `/api/auth`
 
-| Method | Path        | Auth | Description                          | Request Body                         | Response                  |
-|--------|-------------|------|--------------------------------------|--------------------------------------|---------------------------|
-| POST   | `/register` | No   | Create a new account                 | `{ name, email, password }`          | `{ token, user }`         |
-| POST   | `/login`    | No   | Log in with email + password         | `{ email, password }`                | `{ token, user }`         |
-| GET    | `/me`       | Yes  | Get the current authenticated user   | —                                    | `{ user }`                |
+| Method | Path        | Auth | Description                        | Request Body                | Response          |
+| ------ | ----------- | ---- | ---------------------------------- | --------------------------- | ----------------- |
+| POST   | `/register` | No   | Create a new account               | `{ name, email, password }` | `{ token, user }` |
+| POST   | `/login`    | No   | Log in with email + password       | `{ email, password }`       | `{ token, user }` |
+| GET    | `/me`       | Yes  | Get the current authenticated user | —                           | `{ user }`        |
 
 ---
 
 ### Trips — `/api/trips`
 
-| Method | Path                        | Auth | Member | Creator | Description                          |
-|--------|-----------------------------|------|--------|---------|--------------------------------------|
-| POST   | `/`                         | Yes  | —      | —       | Create a trip                        |
-| GET    | `/`                         | Yes  | —      | —       | List trips you are a member of       |
-| GET    | `/:tripId`                  | Yes  | Yes    | —       | Get full trip detail + destinations  |
-| PATCH  | `/:tripId`                  | Yes  | Yes    | Yes     | Edit title / dates / voting deadline |
-| POST   | `/join/:inviteCode`         | Yes  | —      | —       | Join a trip via invite code          |
-| PATCH  | `/:tripId/invite`           | Yes  | Yes    | Yes     | Toggle `inviteActive` (enable/revoke link) |
-| GET    | `/:tripId/dashboard`        | Yes  | Yes    | —       | Scores + badges + deadlock status    |
+| Method | Path                 | Auth | Member | Creator | Description                                |
+| ------ | -------------------- | ---- | ------ | ------- | ------------------------------------------ |
+| POST   | `/`                  | Yes  | —      | —       | Create a trip                              |
+| GET    | `/`                  | Yes  | —      | —       | List trips you are a member of             |
+| GET    | `/:tripId`           | Yes  | Yes    | —       | Get full trip detail + destinations        |
+| PATCH  | `/:tripId`           | Yes  | Yes    | Yes     | Edit title / dates / voting deadline       |
+| POST   | `/join/:inviteCode`  | Yes  | —      | —       | Join a trip via invite code                |
+| PATCH  | `/:tripId/invite`    | Yes  | Yes    | Yes     | Toggle `inviteActive` (enable/revoke link) |
+| GET    | `/:tripId/dashboard` | Yes  | Yes    | —       | Scores + badges + deadlock status          |
 
 **Create trip body:**
+
 ```json
 { "title": "Summer Escape", "votingDeadline": "2026-07-01T00:00:00.000Z" }
 ```
@@ -354,32 +391,36 @@ Authorization: Bearer <jwt_token>
 
 ### Destinations — `/api/trips/:tripId/destinations`
 
-| Method | Path  | Auth | Member | Description                                       |
-|--------|-------|------|--------|---------------------------------------------------|
-| POST   | `/`   | Yes  | Yes    | Propose a destination                             |
-| GET    | `/`   | Yes  | Yes    | List all destinations for the trip                |
-| DELETE | `/:id`| Yes  | Yes    | Delete (proposer or trip creator only)            |
+| Method | Path   | Auth | Member | Description                            |
+| ------ | ------ | ---- | ------ | -------------------------------------- |
+| POST   | `/`    | Yes  | Yes    | Propose a destination                  |
+| GET    | `/`    | Yes  | Yes    | List all destinations for the trip     |
+| DELETE | `/:id` | Yes  | Yes    | Delete (proposer or trip creator only) |
 
 **Propose body:**
+
 ```json
 { "name": "Tokyo", "description": "Sushi heaven", "budgetTier": "high" }
 ```
+
 `budgetTier` must be one of: `"low"`, `"medium"`, `"high"`.
 
 ---
 
 ### Votes — `/api/trips/:tripId`
 
-| Method | Path      | Auth | Member | Description                                                      |
-|--------|-----------|------|--------|------------------------------------------------------------------|
-| PUT    | `/vote`   | Yes  | Yes    | Submit or update ranked vote. Re-submission increments `changeCount`. |
-| GET    | `/vote`   | Yes  | Yes    | Get your current vote                                            |
-| GET    | `/tally`  | Yes  | Yes    | Get Borda scores for all destinations                            |
+| Method | Path     | Auth | Member | Description                                                           |
+| ------ | -------- | ---- | ------ | --------------------------------------------------------------------- |
+| PUT    | `/vote`  | Yes  | Yes    | Submit or update ranked vote. Re-submission increments `changeCount`. |
+| GET    | `/vote`  | Yes  | Yes    | Get your current vote                                                 |
+| GET    | `/tally` | Yes  | Yes    | Get Borda scores for all destinations                                 |
 
 **Vote body:**
+
 ```json
 { "ranking": ["<destId1>", "<destId2>", "<destId3>"] }
 ```
+
 - `ranking` is an **ordered array** of destination ObjectIds (1st element = highest score).
 - Destinations not in the array receive **0 points** (unranked).
 - Duplicates and unknown IDs are rejected with `400`.
@@ -388,20 +429,23 @@ Authorization: Bearer <jwt_token>
 
 ### Availability — `/api/trips/:tripId/availability`
 
-| Method | Path       | Auth | Member | Description                                   |
-|--------|------------|------|--------|-----------------------------------------------|
-| PUT    | `/`        | Yes  | Yes    | Save (upsert) your available dates            |
-| GET    | `/me`      | Yes  | Yes    | Get your currently saved dates                |
-| GET    | `/heatmap` | Yes  | Yes    | Aggregated count per date across all members  |
+| Method | Path       | Auth | Member | Description                                  |
+| ------ | ---------- | ---- | ------ | -------------------------------------------- |
+| PUT    | `/`        | Yes  | Yes    | Save (upsert) your available dates           |
+| GET    | `/me`      | Yes  | Yes    | Get your currently saved dates               |
+| GET    | `/heatmap` | Yes  | Yes    | Aggregated count per date across all members |
 
 **Save dates body:**
+
 ```json
 { "dates": ["2026-07-04", "2026-07-05", "2026-07-06"] }
 ```
+
 - All dates must be `YYYY-MM-DD` strings in UTC.
 - Sending a new array **replaces** the previous selection entirely.
 
 **Heatmap response:**
+
 ```json
 { "2026-07-04": 3, "2026-07-05": 5, "2026-07-06": 2 }
 ```
@@ -411,25 +455,27 @@ Authorization: Bearer <jwt_token>
 ### Wheel of Destiny — `/api/trips/:tripId/wheel`
 
 | Method | Path      | Auth | Member | Creator | Description                                           |
-|--------|-----------|------|--------|---------|-------------------------------------------------------|
+| ------ | --------- | ---- | ------ | ------- | ----------------------------------------------------- |
 | GET    | `/status` | Yes  | Yes    | —       | Check if wheel is eligible; get candidate slices      |
 | POST   | `/spin`   | Yes  | Yes    | Yes     | Pick the winner (server-authoritative), set `decided` |
 
 **Status response:**
+
 ```json
 {
-  "eligible": true,
-  "tie": true,
-  "timeout": false,
-  "slices": [
-    { "destId": "...", "name": "Tokyo", "score": 5 },
-    { "destId": "...", "name": "Bali",  "score": 5 }
-  ],
-  "status": "voting"
+    "eligible": true,
+    "tie": true,
+    "timeout": false,
+    "slices": [
+        { "destId": "...", "name": "Tokyo", "score": 5 },
+        { "destId": "...", "name": "Bali", "score": 5 }
+    ],
+    "status": "voting"
 }
 ```
 
 **Spin response:**
+
 ```json
 {
   "winningDestinationId": "<destId>",
@@ -438,27 +484,36 @@ Authorization: Bearer <jwt_token>
   "status": "decided"
 }
 ```
+
 > `winnerIndex` is the index into `slices` the wheel must animate to. The client uses this to drive the CSS rotation — the server picks the winner first, then the animation plays.
 
 ---
 
 ### Archetypes — `/api/trips/:tripId`
 
-| Method | Path          | Auth | Member | Description                                         |
-|--------|---------------|------|--------|-----------------------------------------------------|
-| GET    | `/archetypes` | Yes  | Yes    | Compute and return badges per member                |
-| GET    | `/dashboard`  | Yes  | Yes    | Combined: scores + badges + deadlock (single call)  |
+| Method | Path          | Auth | Member | Description                                        |
+| ------ | ------------- | ---- | ------ | -------------------------------------------------- |
+| GET    | `/archetypes` | Yes  | Yes    | Compute and return badges per member               |
+| GET    | `/dashboard`  | Yes  | Yes    | Combined: scores + badges + deadlock (single call) |
 
 **Dashboard response:**
+
 ```json
 {
-  "scores": [{ "destId": "...", "name": "Tokyo", "score": 10 }],
-  "badges": { "<userId>": ["The Ghost", "The Accountant"] },
-  "definitions": { "The Ghost": "Has cast zero votes with the deadline looming (<24h)." },
-  "deadlock": { "eligible": false, "tie": false, "timeout": false, "slices": [] },
-  "status": "voting",
-  "memberCount": 3,
-  "voterCount": 2
+    "scores": [{ "destId": "...", "name": "Tokyo", "score": 10 }],
+    "badges": { "<userId>": ["The Ghost", "The Accountant"] },
+    "definitions": {
+        "The Ghost": "Has cast zero votes with the deadline looming (<24h)."
+    },
+    "deadlock": {
+        "eligible": false,
+        "tie": false,
+        "timeout": false,
+        "slices": []
+    },
+    "status": "voting",
+    "memberCount": 3,
+    "voterCount": 2
 }
 ```
 
@@ -468,27 +523,28 @@ Authorization: Bearer <jwt_token>
 
 > **All playbook routes return `403` if `trip.status === "voting"`.**
 
-| Method | Path                       | Auth | Member | Creator | Description                             |
-|--------|----------------------------|------|--------|---------|-----------------------------------------|
-| GET    | `/`                        | Yes  | Yes    | —       | Get instructions, winning dest, checklist |
-| PATCH  | `/instructions`            | Yes  | Yes    | Yes     | Update Markdown instructions            |
-| POST   | `/tasks`                   | Yes  | Yes    | —       | Add a checklist task template           |
-| PATCH  | `/tasks/:taskId/toggle`    | Yes  | Yes    | —       | Toggle YOUR OWN completion on a task    |
-| DELETE | `/tasks/:taskId`           | Yes  | Yes    | —       | Delete task (author or creator only)    |
+| Method | Path                    | Auth | Member | Creator | Description                               |
+| ------ | ----------------------- | ---- | ------ | ------- | ----------------------------------------- |
+| GET    | `/`                     | Yes  | Yes    | —       | Get instructions, winning dest, checklist |
+| PATCH  | `/instructions`         | Yes  | Yes    | Yes     | Update Markdown instructions              |
+| POST   | `/tasks`                | Yes  | Yes    | —       | Add a checklist task template             |
+| PATCH  | `/tasks/:taskId/toggle` | Yes  | Yes    | —       | Toggle YOUR OWN completion on a task      |
+| DELETE | `/tasks/:taskId`        | Yes  | Yes    | —       | Delete task (author or creator only)      |
 
 **Playbook GET response:**
+
 ```json
 {
-  "instructions": "# Meeting point\nLobby at 9am",
-  "winningDestination": { "_id": "...", "name": "Tokyo" },
-  "checklist": [
-    {
-      "id": "...",
-      "label": "Book flights",
-      "completedByMe": false,
-      "completedByCount": 2
-    }
-  ]
+    "instructions": "# Meeting point\nLobby at 9am",
+    "winningDestination": { "_id": "...", "name": "Tokyo" },
+    "checklist": [
+        {
+            "id": "...",
+            "label": "Book flights",
+            "completedByMe": false,
+            "completedByCount": 2
+        }
+    ]
 }
 ```
 
@@ -499,19 +555,23 @@ Authorization: Bearer <jwt_token>
 ### 9.1 Authentication
 
 **Registering:**
+
 1. Go to **http://localhost:5173/register**.
 2. Enter your name, email, and a password (min 6 characters).
 3. On success you are automatically logged in and redirected to `/trips`.
 
 **Logging in:**
+
 1. Go to **http://localhost:5173/login**.
 2. Enter your email and password.
 3. The JWT is stored in `localStorage` under the key `tripcrew_token` and attached to every subsequent API request via an Axios interceptor.
 
 **Logging out:**
+
 - Click **Logout** in the navbar. The token is cleared from localStorage and you are redirected to `/login`.
 
 **Token expiry:**
+
 - Tokens expire after **7 days** (configurable via `JWT_EXPIRES_IN` in `server/.env`).
 - On a `401` response, the Axios interceptor automatically clears the stale token and the app redirects to login on the next protected page visit.
 
@@ -520,18 +580,22 @@ Authorization: Bearer <jwt_token>
 ### 9.2 Creating & Managing Trips
 
 **Create a trip:**
+
 1. Log in and go to `/trips`.
 2. Fill in the **Title** (required) and optionally a **Voting deadline** (datetime-local picker).
 3. Click **Create**. You are redirected to the new trip's dashboard.
 4. You are automatically added as the first member and designated as **Host**.
 
 **Edit a trip (host only):**
+
 - Use `PATCH /api/trips/:tripId` with any of `{ title, startDate, endDate, votingDeadline }`.
 
 **Trip status flow:**
+
 ```
 voting  →  decided  →  archived
 ```
+
 - `voting` — the default state; voting is open.
 - `decided` — set when the wheel is spun; the Playbook unlocks.
 - `archived` — set manually (future use).
@@ -541,16 +605,19 @@ voting  →  decided  →  archived
 ### 9.3 Inviting Members
 
 **Sharing the link:**
+
 1. On the trip dashboard, the invite link is displayed as:
    `http://localhost:5173/join/<inviteCode>`
 2. Copy and share it with anyone you want to invite.
 
 **Joining:**
+
 1. The recipient opens the link in their browser.
 2. If they are not logged in, they are redirected to `/login` and then back to the join page.
 3. They click **Join this trip** to become a member.
 
 **Revoking the link (host only):**
+
 - Call `PATCH /api/trips/:tripId/invite` with `{ "inviteActive": false }`.
 - New joins via the old code are blocked with `403`.
 - Existing members are unaffected.
@@ -564,12 +631,13 @@ voting  →  decided  →  archived
 
 1. Open the trip dashboard.
 2. Use the **Propose a destination** form:
-   - **Name** (required)
-   - **Description** (optional)
-   - **Budget tier**: `low`, `medium`, or `high`
+    - **Name** (required)
+    - **Description** (optional)
+    - **Budget tier**: `low`, `medium`, or `high`
 3. Click **Add**. The destination appears in the list immediately.
 
 **Deleting a destination:**
+
 - The proposer of a destination or the trip creator can click **Remove** on any card.
 - Deleting a destination after votes have been cast does not invalidate those votes; the deleted id simply scores 0 in future tally calculations.
 
@@ -578,20 +646,23 @@ voting  →  decided  →  archived
 ### 9.5 Voting (Borda Count)
 
 **How Borda count works:**
+
 - With `N` proposed destinations, your **1st choice earns N points**, 2nd earns N-1, …, last earns 1.
 - Destinations you **don't rank earn 0 points**.
 - Each destination's score is the **sum across all members' votes**.
 
 **Example** (3 destinations: Tokyo, Bali, Oslo):
+
 | Member | 1st (3pts) | 2nd (2pts) | 3rd (1pt) |
-|--------|-----------|-----------|---------|
-| Alice  | Tokyo     | Bali      | Oslo    |
-| Bob    | Bali      | Tokyo     | Oslo    |
-| Carol  | Tokyo     | Oslo      | Bali    |
+| ------ | ---------- | ---------- | --------- |
+| Alice  | Tokyo      | Bali       | Oslo      |
+| Bob    | Bali       | Tokyo      | Oslo      |
+| Carol  | Tokyo      | Oslo       | Bali      |
 
 Scores: Tokyo = 3+2+3 = **8**, Bali = 2+3+1 = **6**, Oslo = 1+1+2 = **4**
 
 **To cast a vote:**
+
 1. Go to `/trips/:tripId/vote`.
 2. The **Unranked** list shows all proposed destinations.
 3. Click **Add to ranking** to promote a destination to your ranked list.
@@ -599,6 +670,7 @@ Scores: Tokyo = 3+2+3 = **8**, Bali = 2+3+1 = **6**, Oslo = 1+1+2 = **4**
 5. Click **Save vote**. The live scoreboard on the right updates immediately.
 
 **Re-voting:**
+
 - You can update your vote any number of times.
 - Each update increments your `changeCount` (used for the Overthinker badge).
 
@@ -609,6 +681,7 @@ Scores: Tokyo = 3+2+3 = **8**, Bali = 2+3+1 = **6**, Oslo = 1+1+2 = **4**
 The dashboard (`/trips/:tripId`) is the central hub and loads all data in **one API call** (`GET /api/trips/:tripId/dashboard`).
 
 It shows:
+
 - **Trip title** and current status badge.
 - **ScoreBoard** — all destinations ranked by Borda score with a proportional progress bar.
 - **Members list** — each member with their current archetype badges.
@@ -625,13 +698,13 @@ It shows:
 
 Badges are computed **on-the-fly** every time the dashboard loads. They are based on trip-specific behavior, not global user identity.
 
-| Badge           | Condition                                                                 |
-|-----------------|---------------------------------------------------------------------------|
-| 👑 The Dictator  | Has proposed **more than 5** destinations for this trip.                  |
-| 👻 The Ghost     | Has cast **zero votes** AND the voting deadline is **within 24 hours**.   |
-| 🧮 The Accountant| Has proposed **2+ destinations**, all with `budgetTier = "low"`.         |
-| 🤔 The Overthinker | Has changed their vote ranking **more than 3 times** (`changeCount > 3`). |
-| 🎉 The Hype Machine | Was the **first person** to cast a vote for this trip.                 |
+| Badge               | Condition                                                                 |
+| ------------------- | ------------------------------------------------------------------------- |
+| 👑 The Dictator     | Has proposed **more than 5** destinations for this trip.                  |
+| 👻 The Ghost        | Has cast **zero votes** AND the voting deadline is **within 24 hours**.   |
+| 🧮 The Accountant   | Has proposed **2+ destinations**, all with `budgetTier = "low"`.          |
+| 🤔 The Overthinker  | Has changed their vote ranking **more than 3 times** (`changeCount > 3`). |
+| 🎉 The Hype Machine | Was the **first person** to cast a vote for this trip.                    |
 
 A member can hold **multiple badges simultaneously**. Members **can see their own badges** (intentional — the comedy is self-aware).
 
@@ -639,9 +712,10 @@ A member can hold **multiple badges simultaneously**. Members **can see their ow
 
 ### 9.8 Availability Heatmap
 
-**Purpose:** Settle on *when* to travel before deciding *where*.
+**Purpose:** Settle on _when_ to travel before deciding _where_.
 
 **How to mark your availability:**
+
 1. Go to `/trips/:tripId/availability`.
 2. A calendar grid shows the **current month + 2 future months**.
 3. **Click** a date to toggle it; **click and drag** to select/deselect multiple dates in one gesture.
@@ -649,14 +723,15 @@ A member can hold **multiple badges simultaneously**. Members **can see their ow
 5. Selections **save automatically** when you release the mouse.
 
 **Reading the heatmap:**
+
 - The background color of each cell shows how many members are free that day:
 
-| Color       | Hex       | Meaning              |
-|-------------|-----------|----------------------|
-| White       | `#ffffff` | 0 members free       |
-| Light green | `#C0DD97` | 1 member free        |
-| Teal        | `#5DCAA5` | 2 members free       |
-| Dark green  | `#0F6E56` | 3+ members free      |
+| Color       | Hex       | Meaning         |
+| ----------- | --------- | --------------- |
+| White       | `#ffffff` | 0 members free  |
+| Light green | `#C0DD97` | 1 member free   |
+| Teal        | `#5DCAA5` | 2 members free  |
+| Dark green  | `#0F6E56` | 3+ members free |
 
 - Hover over any cell to see the exact date and count in a tooltip.
 - The **Legend** below each month grid shows the color scale.
@@ -670,10 +745,12 @@ A member can hold **multiple badges simultaneously**. Members **can see their ow
 **When does the wheel unlock?**
 
 The Chaos Button appears (for the host only) when **either** of these conditions is true:
+
 1. **Tie:** The two highest-scoring destinations have an equal Borda score (and the score is greater than 0).
 2. **Timeout:** The voting deadline has passed AND fewer than 50% of trip members have submitted a vote.
 
 **How it works (technical detail):**
+
 1. The host clicks **Spin the Wheel of Destiny**.
 2. The app calls `POST /api/trips/:tripId/wheel/spin` **first**.
 3. The **server** randomly picks the winner among the tied destinations, saves `winningDestination` on the trip, and changes `status` to `"decided"`.
@@ -684,6 +761,7 @@ The Chaos Button appears (for the host only) when **either** of these conditions
 > **Why server-first?** This prevents the wheel from visually landing on one destination while the server records a different one.
 
 **After the spin:**
+
 - The trip status changes to `decided`.
 - The Playbook immediately becomes accessible.
 - No further spinning is possible on that trip.
@@ -695,12 +773,14 @@ The Chaos Button appears (for the host only) when **either** of these conditions
 **Access:** `/trips/:tripId/playbook` — only accessible after the trip status becomes `decided`. Returns `403` while still in `voting` status.
 
 **Host capabilities:**
+
 1. Click **Edit** to enter Markdown editing mode.
 2. Write meeting points, protocols, packing lists, etc. in Markdown.
 3. Click **Save instructions**. The rendered view appears with full Markdown formatting (headings, bold, lists, links, code).
 4. **Security:** All rendered Markdown passes through **DOMPurify** before being injected into the DOM — stored XSS attacks via the instructions field are blocked.
 
 **All member capabilities:**
+
 - View the rendered instructions.
 - See the **winning destination** highlighted at the top.
 - Add **checklist tasks** (shared task templates visible to everyone).
@@ -708,6 +788,7 @@ The Chaos Button appears (for the host only) when **either** of these conditions
 - The `completedByCount` badge shows how many members have completed each task.
 
 **Deleting a task:**
+
 - Only the task author or the trip creator can delete a task template.
 
 ---
@@ -716,14 +797,15 @@ The Chaos Button appears (for the host only) when **either** of these conditions
 
 Every protected route goes through a middleware chain. The rules are enforced server-side — client-side conditional rendering is a UX convenience only.
 
-| Middleware          | File                         | What it checks                                                  |
-|---------------------|------------------------------|-----------------------------------------------------------------|
-| `requireAuth`       | `auth.middleware.js`         | Valid JWT in `Authorization: Bearer` header                     |
-| `requireMembership` | `trip.middleware.js`         | `req.user.id` is in `trip.members[]`; attaches `req.trip`      |
-| `requireCreator`    | `trip.middleware.js`         | `req.user.id === trip.creator`                                  |
-| `requireDecided`    | `trip.middleware.js`         | `trip.status !== 'voting'`; returns `403` for playbook routes  |
+| Middleware          | File                 | What it checks                                                |
+| ------------------- | -------------------- | ------------------------------------------------------------- |
+| `requireAuth`       | `auth.middleware.js` | Valid JWT in `Authorization: Bearer` header                   |
+| `requireMembership` | `trip.middleware.js` | `req.user.id` is in `trip.members[]`; attaches `req.trip`     |
+| `requireCreator`    | `trip.middleware.js` | `req.user.id === trip.creator`                                |
+| `requireDecided`    | `trip.middleware.js` | `trip.status !== 'voting'`; returns `403` for playbook routes |
 
 **Composition example for the spin route:**
+
 ```
 POST /api/trips/:tripId/wheel/spin
   → requireAuth        (must be logged in)
@@ -738,18 +820,18 @@ POST /api/trips/:tripId/wheel/spin
 
 ## 11. Frontend Page Map
 
-| URL                             | Access          | Description                                |
-|---------------------------------|-----------------|--------------------------------------------|
-| `/`                             | Public          | Landing page with CTAs                     |
-| `/login`                        | Public          | Login form                                 |
-| `/register`                     | Public          | Registration form                          |
-| `/trips`                        | Authenticated   | Trip list + create trip form               |
-| `/join/:inviteCode`             | Authenticated   | Join trip via invite link                  |
-| `/trips/:tripId`                | Trip member     | Dashboard: scores, destinations, members   |
-| `/trips/:tripId/vote`           | Trip member     | Submit ranked vote; view live scores       |
-| `/trips/:tripId/availability`   | Trip member     | Click-drag calendar heatmap                |
-| `/trips/:tripId/wheel`          | Trip member*    | Wheel animation; spin button (host only)   |
-| `/trips/:tripId/playbook`       | Trip member†    | Instructions + checklist                   |
+| URL                           | Access        | Description                              |
+| ----------------------------- | ------------- | ---------------------------------------- |
+| `/`                           | Public        | Landing page with CTAs                   |
+| `/login`                      | Public        | Login form                               |
+| `/register`                   | Public        | Registration form                        |
+| `/trips`                      | Authenticated | Trip list + create trip form             |
+| `/join/:inviteCode`           | Authenticated | Join trip via invite link                |
+| `/trips/:tripId`              | Trip member   | Dashboard: scores, destinations, members |
+| `/trips/:tripId/vote`         | Trip member   | Submit ranked vote; view live scores     |
+| `/trips/:tripId/availability` | Trip member   | Click-drag calendar heatmap              |
+| `/trips/:tripId/wheel`        | Trip member*  | Wheel animation; spin button (host only) |
+| `/trips/:tripId/playbook`     | Trip member†  | Instructions + checklist                 |
 
 \* All members can view the wheel page; only the host can trigger a spin.  
 † Redirects / returns `403` until `trip.status === "decided"`.
@@ -765,14 +847,15 @@ POST /api/trips/:tripId/wheel/spin
 1. **Create / update the Mongoose model** in `server/models/` if new fields are needed.
 2. **Write the controller function** in `server/controllers/`. Always use `async/await` + `try/catch` with `next(err)`.
 3. **Add the route** in the appropriate `server/routes/` file, composing the correct middleware chain.
-4. **Mount the router** in `server/app.js`.
-5. **Add the API call function** in the appropriate `client/src/api/*.api.js` file.
-6. **Use it in a component or page** by calling that function — never call axios directly from a component.
+4. **Mount the router** in `server/app.ts`.
+5. **Add (or update) the request/response contract** in `shared/src/api.ts`.
+6. **Add the API call function** in the appropriate `client/src/api/*.api.ts` file, typed against the shared contract.
+7. **Use it in a component or page** by calling that function — never call axios directly from a component.
 
 ### Adding a new page
 
-1. Create `client/src/pages/MyPage.jsx`.
-2. Import and add a `<Route>` in `client/src/App.jsx`, wrapping with `<ProtectedRoute>` if auth is required.
+1. Create `client/src/pages/MyPage.tsx`.
+2. Import and add a `<Route>` in `client/src/App.tsx`, wrapping with `<ProtectedRoute>` if auth is required.
 3. Add any necessary API call functions to `client/src/api/`.
 
 ### Middleware composition
@@ -781,10 +864,16 @@ Middleware is applied **left-to-right** on the route. Each middleware calls `nex
 
 ```js
 // Example: only authenticated trip members can call this
-router.get('/something', requireAuth, requireMembership, myController);
+router.get("/something", requireAuth, requireMembership, myController);
 
 // Example: only the trip creator can call this
-router.patch('/something', requireAuth, requireMembership, requireCreator, myController);
+router.patch(
+    "/something",
+    requireAuth,
+    requireMembership,
+    requireCreator,
+    myController,
+);
 ```
 
 ---
@@ -794,7 +883,7 @@ router.patch('/something', requireAuth, requireMembership, requireCreator, myCon
 ### Server (Node/Express)
 
 1. Set `NODE_ENV=production` in your environment.
-2. Use a process manager (e.g., PM2): `pm2 start server.js`.
+2. Build first (`npm run build`), then run the compiled output with a process manager (e.g., PM2): `pm2 start dist/server.js`.
 3. Set `CLIENT_ORIGIN` to your production frontend domain (e.g., `https://tripcrew.example.com`).
 4. Use MongoDB Atlas or a managed MongoDB provider.
 5. Store `JWT_SECRET` and `MONGODB_URI` as environment variables in your hosting platform — **never commit `.env` to source control**.
@@ -820,36 +909,44 @@ location / {
 ## 14. Common Issues & Troubleshooting
 
 ### `MongoDB connected` never appears
+
 - Check that `MONGODB_URI` in `server/.env` is set correctly.
 - For Atlas, ensure your IP address is whitelisted in the Atlas Network Access settings.
 - For a local install, confirm `mongod` is running: `Get-Service MongoDB` (Windows) or `systemctl status mongod` (Linux).
 
 ### `401 Invalid or expired token` on every request
+
 - The token may have expired (default TTL: 7 days). Log out and log back in.
 - Ensure `JWT_SECRET` in `server/.env` has not changed since the token was issued. Changing the secret invalidates all existing tokens.
 
 ### CORS error in the browser (`Access-Control-Allow-Origin`)
+
 - `CLIENT_ORIGIN` in `server/.env` must exactly match the origin the browser sends.
 - If you use `http://localhost:5173`, that value must be in `CLIENT_ORIGIN` — no trailing slash, correct port.
 
 ### Wheel spin returns `409 No deadlock`
+
 - No deadlock condition exists yet. The wheel only unlocks when either:
-  - The top two destinations have an exactly equal Borda score, OR
-  - The voting deadline has passed with fewer than 50% of members having voted.
+    - The top two destinations have an exactly equal Borda score, OR
+    - The voting deadline has passed with fewer than 50% of members having voted.
 - Check `GET /api/trips/:tripId/wheel/status` for the current `eligible`, `tie`, and `timeout` values.
 
 ### Playbook returns `403`
+
 - The trip status is still `"voting"`. The playbook unlocks only after the winning destination is decided (via wheel spin or when status is manually advanced).
 
 ### `Failed to load` on the heatmap with no data
+
 - If no member has submitted availability yet, the heatmap API returns `{}` (an empty object), which is the correct response. The calendar grid renders all cells as white.
 
 ### Smoke tests fail with `MODULE_NOT_FOUND`
-- Always run smoke tests from the `server/` directory:
-  ```powershell
-  cd "D:\Projects\TripCrew Planner\server"
-  node smoke/auth.smoke.js
-  ```
+
+- Always run the tests from the `server/` directory:
+    ```powershell
+    cd "D:\Projects\TripCrew Planner\server"
+    npm test
+    ```
 
 ### `passwordHash` appears in API response
+
 - The `User` model uses `select: false` on `passwordHash`. If you see it in a response, a query is explicitly selecting it (e.g., `.select('+passwordHash')`), which is intentional only during login. The `toSafeJSON()` method never includes it.

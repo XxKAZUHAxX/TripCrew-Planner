@@ -1,3 +1,6 @@
+import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
 // Drag-to-rank list — no external library needed; pure React state.
 export interface RankableItem {
     _id: string;
@@ -40,38 +43,54 @@ export default function RankableList({ ranked, unranked, onRankingChange }: Rank
     }
 
     return (
-        <div>
+        <div className="space-y-4">
             {ranked.length > 0 && (
-                <div className="mb-3">
-                    <h3 className="h6 text-muted">Your ranking (1st = highest points)</h3>
-                    <ol className="list-group list-group-numbered">
+                <div>
+                    <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                        Your ranking (1st = highest points)
+                    </h3>
+                    <ol className="space-y-2">
                         {ranked.map((d, i) => (
                             <li
                                 key={d._id}
-                                className="list-group-item d-flex justify-content-between align-items-center"
+                                className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2"
                             >
-                                <span>{d.name}</span>
-                                <div className="d-flex gap-1">
-                                    <button
-                                        className="btn btn-sm btn-outline-secondary py-0"
+                                <span className="flex items-center gap-2 font-medium">
+                                    <span className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                                        {i + 1}
+                                    </span>
+                                    {d.name}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-7"
                                         onClick={() => moveUp(i)}
                                         disabled={i === 0}
+                                        aria-label="Move up"
                                     >
-                                        ↑
-                                    </button>
-                                    <button
-                                        className="btn btn-sm btn-outline-secondary py-0"
+                                        <ChevronUp className="size-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-7"
                                         onClick={() => moveDown(i)}
                                         disabled={i === ranked.length - 1}
+                                        aria-label="Move down"
                                     >
-                                        ↓
-                                    </button>
-                                    <button
-                                        className="btn btn-sm btn-outline-danger py-0"
+                                        <ChevronDown className="size-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-7 text-muted-foreground hover:text-destructive"
                                         onClick={() => removeFromRanked(d)}
+                                        aria-label="Remove"
                                     >
-                                        ✕
-                                    </button>
+                                        <X className="size-4" />
+                                    </Button>
                                 </div>
                             </li>
                         ))}
@@ -80,20 +99,19 @@ export default function RankableList({ ranked, unranked, onRankingChange }: Rank
             )}
             {unranked.length > 0 && (
                 <div>
-                    <h3 className="h6 text-muted">Unranked (won&apos;t count)</h3>
-                    <ul className="list-group">
+                    <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                        Unranked (won&apos;t count)
+                    </h3>
+                    <ul className="space-y-2">
                         {unranked.map((d) => (
                             <li
                                 key={d._id}
-                                className="list-group-item d-flex justify-content-between align-items-center"
+                                className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2"
                             >
                                 <span>{d.name}</span>
-                                <button
-                                    className="btn btn-sm btn-outline-primary py-0"
-                                    onClick={() => addToRanked(d)}
-                                >
+                                <Button variant="outline" size="sm" onClick={() => addToRanked(d)}>
                                     Add to ranking
-                                </button>
+                                </Button>
                             </li>
                         ))}
                     </ul>

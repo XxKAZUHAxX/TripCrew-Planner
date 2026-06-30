@@ -23,7 +23,7 @@ describe('RankableList', () => {
         );
 
         // The second row's up button moves Bali above Tokyo.
-        const upButtons = screen.getAllByRole('button', { name: '↑' });
+        const upButtons = screen.getAllByRole('button', { name: 'Move up' });
         await userEvent.click(upButtons[1]!);
 
         expect(onRankingChange).toHaveBeenCalledWith(['b', 'a']);

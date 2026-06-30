@@ -1,4 +1,8 @@
+import { Trash2 } from 'lucide-react';
 import type { ChecklistItem } from '@tripcrew/shared';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface TaskRowProps {
     task: ChecklistItem;
@@ -10,33 +14,35 @@ interface TaskRowProps {
 // Individual checklist row.
 export default function TaskRow({ task, onToggle, onDelete, canDelete }: TaskRowProps) {
     return (
-        <li className="list-group-item d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center gap-2">
+        <li className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2">
+            <label className="flex cursor-pointer items-center gap-2">
                 <input
                     type="checkbox"
-                    className="form-check-input"
+                    className="size-4 rounded border-input accent-primary"
                     checked={task.completedByMe}
                     onChange={() => onToggle(task.id)}
-                    id={`task-${task.id}`}
                 />
-                <label
-                    htmlFor={`task-${task.id}`}
-                    className={task.completedByMe ? 'text-decoration-line-through text-muted' : ''}
+                <span
+                    className={cn(
+                        'text-sm',
+                        task.completedByMe && 'text-muted-foreground line-through'
+                    )}
                 >
                     {task.label}
-                </label>
-            </div>
-            <div className="d-flex align-items-center gap-2">
-                <span className="badge bg-light text-dark border">
-                    {task.completedByCount} done
                 </span>
+            </label>
+            <div className="flex items-center gap-2">
+                <Badge variant="muted">{task.completedByCount} done</Badge>
                 {canDelete && (
-                    <button
-                        className="btn btn-sm btn-outline-danger py-0"
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 text-muted-foreground hover:text-destructive"
                         onClick={() => onDelete(task.id)}
+                        aria-label="Delete task"
                     >
-                        ✕
-                    </button>
+                        <Trash2 className="size-4" />
+                    </Button>
                 )}
             </div>
         </li>

@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type { ChecklistItem } from '@tripcrew/shared';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import TaskRow from './TaskRow';
 
 interface ChecklistProps {
@@ -29,10 +31,12 @@ export default function Checklist({
     }
 
     return (
-        <div>
-            <h3 className="h6 mt-3">Checklist</h3>
-            {checklist.length === 0 && <p className="text-muted small">No tasks yet.</p>}
-            <ul className="list-group mb-3">
+        <div className="space-y-3">
+            <h3 className="text-sm font-semibold">Checklist</h3>
+            {checklist.length === 0 && (
+                <p className="text-sm text-muted-foreground">No tasks yet.</p>
+            )}
+            <ul className="space-y-2">
                 {checklist.map((t) => (
                     <TaskRow
                         key={t.id}
@@ -46,14 +50,15 @@ export default function Checklist({
                     />
                 ))}
             </ul>
-            <form onSubmit={handleAdd} className="input-group input-group-sm">
-                <input
-                    className="form-control"
+            <form onSubmit={handleAdd} className="flex gap-2">
+                <Input
                     placeholder="Add task…"
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                 />
-                <button className="btn btn-outline-primary">Add</button>
+                <Button type="submit" variant="outline">
+                    Add
+                </Button>
             </form>
         </div>
     );

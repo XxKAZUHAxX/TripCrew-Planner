@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, Pencil, Trophy } from 'lucide-react';
 import type { ChecklistItem, Destination } from '@tripcrew/shared';
 import {
     getPlaybook,
@@ -7,14 +8,19 @@ import {
     addTask,
     toggleTask,
     deleteTask,
-} from '../api/playbook.api';
-import { getTrip } from '../api/trips.api';
-import { useAuth } from '../hooks/useAuth';
-import { getErrorMessage } from '../utils/errors';
-import { refId } from '../utils/refs';
-import SafeMarkdown from '../components/SafeMarkdown';
-import MarkdownEditor from '../components/MarkdownEditor';
-import Checklist from '../components/Checklist';
+} from '@/api/playbook.api';
+import { getTrip } from '@/api/trips.api';
+import { useAuth } from '@/hooks/useAuth';
+import { getErrorMessage } from '@/utils/errors';
+import { refId } from '@/utils/refs';
+import { cn } from '@/lib/utils';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageLoader } from '@/components/ui/spinner';
+import SafeMarkdown from '@/components/SafeMarkdown';
+import MarkdownEditor from '@/components/MarkdownEditor';
+import Checklist from '@/components/Checklist';
 
 export default function PlaybookPage() {
     const { tripId } = useParams() as { tripId: string };
@@ -70,59 +76,79 @@ export default function PlaybookPage() {
         await load();
     }
 
-    if (loading) return <div className="container py-5">Loading…</div>;
+    if (loading) return <PageLoader />;
     if (error)
         return (
-            <div className="container py-5">
-                <div className="alert alert-danger">{error}</div>
-                <Link to={`/trips/${tripId}`}>← Back to dashboard</Link>
+            <div className="mx-auto max-w-2xl px-4 py-8">
+                <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+                <Link
+                    className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+                    to={`/trips/${tripId}`}
+                >
+                    <ArrowLeft className="size-4" />
+                    Back to dashboard
+                </Link>
             </div>
         );
 
     return (
-        <div className="container py-4" style={{ maxWidth: 720 }}>
-            <div className="d-flex justify-content-between align-items-center mb-3">
-                <h1 className="h3 mb-0">Trip Playbook</h1>
-                <Link className="btn btn-outline-secondary btn-sm" to={`/trips/${tripId}`}>
-                    ← Back
+        <div className="mx-auto max-w-2xl px-4 py-8">
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <h1 className="text-2xl font-bold">Trip Playbook</h1>
+                <Link
+                    className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+                    to={`/trips/${tripId}`}
+                >
+                    <ArrowLeft className="size-4" />
+                    Back
                 </Link>
             </div>
 
             {winningDest && (
-                <div className="alert alert-success">
-                    🏆 Destination decided: <strong>{winningDest.name}</strong>
+                <div className="mb-4 flex items-center gap-2 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-success">
+                    <Trophy className="size-5" />
+                    <span>
+                        Destination decided: <strong>{winningDest.name}</strong>
+                    </span>
                 </div>
             )}
 
-            <div className="card p-3 mb-4 shadow-sm">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h2 className="h5 mb-0">Instructions</h2>
+            <Card className="mb-4">
+                <CardHeader className="flex-row items-center justify-between pb-3">
+                    <CardTitle className="text-lg">Instructions</CardTitle>
                     {isCreator && (
-                        <button
-                            className="btn btn-sm btn-outline-secondary"
-                            onClick={() => setEditing((v) => !v)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => setEditing((v) => !v)}>
+                            <Pencil className="size-4" />
                             {editing ? 'Preview' : 'Edit'}
-                        </button>
+                        </Button>
                     )}
-                </div>
-                {isCreator && editing ? (
-                    <MarkdownEditor instructions={instructions} onSave={handleSaveInstructions} />
-                ) : (
-                    <SafeMarkdown content={instructions} />
-                )}
-            </div>
+                </CardHeader>
+                <CardContent>
+                    {isCreator && editing ? (
+                        <MarkdownEditor
+                            instructions={instructions}
+                            onSave={handleSaveInstructions}
+                        />
+                    ) : (
+                        <SafeMarkdown content={instructions} />
+                    )}
+                </CardContent>
+            </Card>
 
-            <div className="card p-3 shadow-sm">
-                <Checklist
-                    checklist={checklist}
-                    currentUserId={user?.id}
-                    creatorId={creatorId}
-                    onToggle={handleToggle}
-                    onAdd={handleAddTask}
-                    onDelete={handleDelete}
-                />
-            </div>
+            <Card>
+                <CardContent className="pt-5">
+                    <Checklist
+                        checklist={checklist}
+                        currentUserId={user?.id}
+                        creatorId={creatorId}
+                        onToggle={handleToggle}
+                        onAdd={handleAddTask}
+                        onDelete={handleDelete}
+                    />
+                </CardContent>
+            </Card>
         </div>
     );
 }

@@ -1,52 +1,212 @@
-.badge-chip {
-    cursor: default;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * TripCrew design tokens — a warm, friendly travel palette:
+ *   - Teal primary (ocean / trustworthy)
+ *   - Amber accent (playful energy for the Wheel & badges)
+ *   - Subtly warm neutrals
+ */
+:root {
+    --radius: 0.75rem;
+
+    --background: oklch(0.99 0.004 95);
+    --foreground: oklch(0.23 0.02 255);
+
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.23 0.02 255);
+
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.23 0.02 255);
+
+    --primary: oklch(0.58 0.1 196);
+    --primary-foreground: oklch(0.99 0.01 196);
+
+    --secondary: oklch(0.96 0.012 90);
+    --secondary-foreground: oklch(0.3 0.02 255);
+
+    --muted: oklch(0.96 0.008 90);
+    --muted-foreground: oklch(0.53 0.02 255);
+
+    --accent: oklch(0.93 0.05 75);
+    --accent-foreground: oklch(0.34 0.07 60);
+
+    --destructive: oklch(0.58 0.22 27);
+    --destructive-foreground: oklch(0.99 0.01 27);
+
+    --success: oklch(0.62 0.13 158);
+    --success-foreground: oklch(0.99 0.01 158);
+
+    --warning: oklch(0.78 0.15 78);
+    --warning-foreground: oklch(0.32 0.07 60);
+
+    --border: oklch(0.9 0.01 90);
+    --input: oklch(0.9 0.01 90);
+    --ring: oklch(0.58 0.1 196);
+
+    --chart-1: oklch(0.58 0.1 196);
+    --chart-2: oklch(0.7 0.15 70);
+    --chart-3: oklch(0.55 0.16 25);
+    --chart-4: oklch(0.62 0.13 158);
+    --chart-5: oklch(0.55 0.14 300);
 }
 
-/* Availability heatmap grid */
-.heatmap-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    user-select: none;
+.dark {
+    --background: oklch(0.2 0.02 255);
+    --foreground: oklch(0.96 0.01 95);
+
+    --card: oklch(0.25 0.02 255);
+    --card-foreground: oklch(0.96 0.01 95);
+
+    --popover: oklch(0.25 0.02 255);
+    --popover-foreground: oklch(0.96 0.01 95);
+
+    --primary: oklch(0.7 0.11 196);
+    --primary-foreground: oklch(0.2 0.03 255);
+
+    --secondary: oklch(0.3 0.02 255);
+    --secondary-foreground: oklch(0.96 0.01 95);
+
+    --muted: oklch(0.3 0.02 255);
+    --muted-foreground: oklch(0.7 0.02 255);
+
+    --accent: oklch(0.38 0.06 70);
+    --accent-foreground: oklch(0.95 0.03 80);
+
+    --destructive: oklch(0.62 0.2 25);
+    --destructive-foreground: oklch(0.98 0.01 25);
+
+    --success: oklch(0.68 0.13 158);
+    --success-foreground: oklch(0.16 0.02 158);
+
+    --warning: oklch(0.8 0.14 78);
+    --warning-foreground: oklch(0.26 0.06 60);
+
+    --border: oklch(0.32 0.02 255);
+    --input: oklch(0.34 0.02 255);
+    --ring: oklch(0.7 0.11 196);
 }
 
-.heatmap-cell {
-    aspect-ratio: 1 / 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    color: #333;
-    cursor: pointer;
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+
+    --font-sans:
+        'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
+        sans-serif;
 }
 
-.heatmap-cell.is-mine {
-    outline: 2px solid #0d6efd;
-    outline-offset: -2px;
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-feature-settings:
+            'rlig' 1,
+            'calt' 1;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+        @apply tracking-tight;
+    }
 }
 
-.heatmap-cell.is-blank {
-    visibility: hidden;
+/* Rendered Markdown (Playbook instructions). Restores typographic defaults that
+   Tailwind's preflight resets, scoped to sanitized content only. */
+.markdown-body {
+    @apply text-sm leading-relaxed text-foreground;
+}
+.markdown-body h1 {
+    @apply mb-3 mt-5 text-xl font-bold tracking-tight;
+}
+.markdown-body h2 {
+    @apply mb-2 mt-4 text-lg font-semibold tracking-tight;
+}
+.markdown-body h3 {
+    @apply mb-2 mt-3 text-base font-semibold;
+}
+.markdown-body p {
+    @apply my-2;
+}
+.markdown-body ul {
+    @apply my-2 list-disc pl-6;
+}
+.markdown-body ol {
+    @apply my-2 list-decimal pl-6;
+}
+.markdown-body li {
+    @apply my-1;
+}
+.markdown-body a {
+    @apply font-medium text-primary underline underline-offset-2;
+}
+.markdown-body code {
+    @apply rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em];
+}
+.markdown-body pre {
+    @apply my-3 overflow-x-auto rounded-lg bg-muted p-3;
+}
+.markdown-body pre code {
+    @apply bg-transparent p-0;
+}
+.markdown-body blockquote {
+    @apply my-3 border-l-4 border-border pl-4 italic text-muted-foreground;
 }
 
-/* Wheel of Destiny */
+/* Wheel of Destiny — canvas rotation animation. */
 .wheel-wrapper {
     position: relative;
     width: 320px;
     height: 320px;
     margin: 0 auto;
 }
-
 .wheel {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
-    border: 6px solid #212529;
+    border-radius: 9999px;
+    border: 6px solid var(--foreground);
+    box-shadow: 0 10px 30px -10px oklch(0 0 0 / 0.35);
     transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
 }
-
 .wheel-pointer {
     position: absolute;
     top: -10px;
@@ -54,8 +214,9 @@
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 12px solid transparent;
-    border-right: 12px solid transparent;
-    border-top: 22px solid #dc3545;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-top: 24px solid var(--destructive);
     z-index: 2;
+    filter: drop-shadow(0 2px 2px oklch(0 0 0 / 0.25));
 }

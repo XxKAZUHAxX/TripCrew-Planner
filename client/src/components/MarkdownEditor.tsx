@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface MarkdownEditorProps {
     instructions: string;
@@ -20,18 +23,19 @@ export default function MarkdownEditor({ instructions, onSave }: MarkdownEditorP
     }
 
     return (
-        <div>
-            <label className="form-label fw-semibold">Instructions (Markdown)</label>
-            <textarea
-                className="form-control font-monospace"
+        <div className="space-y-2">
+            <Label htmlFor="instructions">Instructions (Markdown)</Label>
+            <Textarea
+                id="instructions"
                 rows={8}
+                className="font-mono"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="# Meeting point&#10;Lobby at 9am…"
             />
-            <button className="btn btn-primary btn-sm mt-2" onClick={handleSave} disabled={saving}>
+            <Button size="sm" onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving…' : 'Save instructions'}
-            </button>
+            </Button>
         </div>
     );
 }

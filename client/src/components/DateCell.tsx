@@ -1,5 +1,6 @@
-import type { MonthCell } from '../utils/dateKeys';
-import { countToColor } from '../utils/colorScale';
+import type { MonthCell } from '@/utils/dateKeys';
+import { countToColor } from '@/utils/colorScale';
+import { cn } from '@/lib/utils';
 
 interface DateCellProps {
     cell: MonthCell | null;
@@ -17,23 +18,25 @@ export default function DateCell({
     onMouseEnter,
 }: DateCellProps) {
     if (!cell) {
-        return <div className="heatmap-cell is-blank" aria-hidden="true" />;
+        return <div aria-hidden className="aspect-square" />;
     }
 
     const bg = countToColor(count || 0);
-    const border = selected ? '2px solid #0d6efd' : '1px solid #dee2e6';
 
     return (
-        <div
-            className="heatmap-cell"
-            style={{ backgroundColor: bg, border, color: count >= 3 ? '#fff' : '#333' }}
+        <button
+            type="button"
+            className={cn(
+                'flex aspect-square select-none items-center justify-center rounded-md border text-xs transition',
+                selected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-border'
+            )}
+            style={{ backgroundColor: bg, color: count >= 3 ? '#fff' : undefined }}
             onMouseDown={() => onMouseDown(cell.key)}
             onMouseEnter={() => onMouseEnter(cell.key)}
             title={`${cell.key} · ${count || 0} available`}
-            role="button"
             aria-pressed={selected}
         >
             {cell.day}
-        </div>
+        </button>
     );
 }

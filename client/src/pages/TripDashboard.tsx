@@ -1,20 +1,35 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Calendar, Check, ClipboardList, Copy, Sparkles, Vote } from 'lucide-react';
 import type {
     DashboardResponse,
     Destination,
     ProposeDestinationRequest,
     Trip,
+    TripStatus,
     UserRef,
 } from '@tripcrew/shared';
-import { getTrip, getDashboard, toggleInvite } from '../api/trips.api';
-import { proposeDestination, deleteDestination } from '../api/destinations.api';
-import { useAuth } from '../hooks/useAuth';
-import { getErrorMessage } from '../utils/errors';
-import { refId } from '../utils/refs';
-import MembersList from '../components/MembersList';
-import DestinationList from '../components/DestinationList';
-import ScoreBoard from '../components/ScoreBoard';
+import { getTrip, getDashboard, toggleInvite } from '@/api/trips.api';
+import { proposeDestination, deleteDestination } from '@/api/destinations.api';
+import { useAuth } from '@/hooks/useAuth';
+import { getErrorMessage } from '@/utils/errors';
+import { refId } from '@/utils/refs';
+import { cn } from '@/lib/utils';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge, type BadgeProps } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageLoader } from '@/components/ui/spinner';
+import MembersList from '@/components/MembersList';
+import DestinationList from '@/components/DestinationList';
+import ScoreBoard from '@/components/ScoreBoard';
+
+const STATUS_VARIANT: Record<TripStatus, BadgeProps['variant']> = {
+    voting: 'secondary',
+    decided: 'success',
+    archived: 'muted',
+};
 
 export default function TripDashboard() {
     const { tripId } = useParams() as { tripId: string };
@@ -63,87 +78,121 @@ export default function TripDashboard() {
 
     function copyInvite() {
         if (!trip) return;
-        const url = `${window.location.origin}/join/${trip.inviteCode}`;
-        navigator.clipboard.writeText(url);
+        navigator.clipboard.writeText(`${window.location.origin}/join/${trip.inviteCode}`);
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
     }
 
-    if (loading) return <div className="container py-5">Loading…</div>;
+    if (loading) return <PageLoader />;
     if (error)
         return (
-            <div className="container py-5">
-                <div className="alert alert-danger">{error}</div>
+            <div className="mx-auto max-w-6xl px-4 py-8">
+                <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
             </div>
         );
     if (!trip) return null;
 
     const creatorId = refId(trip.creator);
     const isCreator = creatorId === user?.id;
+    const inviteUrl = `${window.location.origin}/join/${trip.inviteCode}`;
 
     return (
-        <div className="container py-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-                <h1 className="h3 mb-0">{trip.title}</h1>
-                <span className="badge bg-secondary text-uppercase">{trip.status}</span>
+        <div className="mx-auto max-w-6xl px-4 py-8">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-bold">{trip.title}</h1>
+                    <Badge variant={STATUS_VARIANT[trip.status]} className="uppercase">
+                        {trip.status}
+                    </Badge>
+                </div>
             </div>
 
-            <div className="d-flex flex-wrap gap-2 mb-4">
-                <Link className="btn btn-outline-primary btn-sm" to={`/trips/${tripId}/vote`}>
+            <div className="mb-6 flex flex-wrap gap-2">
+                <Link
+                    className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+                    to={`/trips/${tripId}/vote`}
+                >
+                    <Vote className="size-4" />
                     Vote
                 </Link>
                 <Link
-                    className="btn btn-outline-primary btn-sm"
+                    className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
                     to={`/trips/${tripId}/availability`}
                 >
+                    <Calendar className="size-4" />
                     Availability
                 </Link>
                 {dashboard?.deadlock?.eligible && trip.status === 'voting' && (
-                    <Link className="btn btn-warning btn-sm" to={`/trips/${tripId}/wheel`}>
+                    <Link
+                        className={cn(buttonVariants({ variant: 'warning', size: 'sm' }))}
+                        to={`/trips/${tripId}/wheel`}
+                    >
+                        <Sparkles className="size-4" />
                         Wheel of Destiny
                     </Link>
                 )}
                 {trip.status !== 'voting' && (
-                    <Link className="btn btn-success btn-sm" to={`/trips/${tripId}/playbook`}>
+                    <Link
+                        className={cn(buttonVariants({ variant: 'success', size: 'sm' }))}
+                        to={`/trips/${tripId}/playbook`}
+                    >
+                        <ClipboardList className="size-4" />
                         Playbook
                     </Link>
                 )}
             </div>
 
-            <div className="row g-4">
-                <div className="col-md-4">
-                    <h2 className="h5">Members</h2>
+            <div className="grid gap-6 lg:grid-cols-3">
+                <div className="space-y-4">
+                    <h2 className="text-lg font-semibold">Members</h2>
                     <MembersList
                         members={members}
                         creatorId={creatorId}
                         badges={dashboard?.badges}
                         definitions={dashboard?.definitions}
                     />
-                    <div className="card p-3 mt-3 shadow-sm">
-                        <h3 className="h6">Invite link</h3>
-                        <div className="input-group input-group-sm mb-2">
-                            <input
-                                className="form-control"
-                                readOnly
-                                value={`${window.location.origin}/join/${trip.inviteCode}`}
-                            />
-                            <button className="btn btn-outline-secondary" onClick={copyInvite}>
-                                {copied ? 'Copied!' : 'Copy'}
-                            </button>
-                        </div>
-                        {isCreator && (
-                            <button
-                                className={`btn btn-sm ${trip.inviteActive ? 'btn-outline-danger' : 'btn-outline-success'}`}
-                                onClick={handleToggleInvite}
-                            >
-                                {trip.inviteActive ? 'Deactivate link' : 'Reactivate link'}
-                            </button>
-                        )}
-                    </div>
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Invite link</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <div className="flex gap-2">
+                                <Input readOnly value={inviteUrl} className="text-xs" />
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={copyInvite}
+                                    aria-label="Copy invite link"
+                                >
+                                    {copied ? (
+                                        <Check className="size-4 text-success" />
+                                    ) : (
+                                        <Copy className="size-4" />
+                                    )}
+                                </Button>
+                            </div>
+                            {isCreator && (
+                                <Button
+                                    variant={trip.inviteActive ? 'outline' : 'secondary'}
+                                    size="sm"
+                                    className={cn(
+                                        'w-full',
+                                        trip.inviteActive &&
+                                            'text-destructive hover:text-destructive'
+                                    )}
+                                    onClick={handleToggleInvite}
+                                >
+                                    {trip.inviteActive ? 'Deactivate link' : 'Reactivate link'}
+                                </Button>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
 
-                <div className="col-md-4">
-                    <h2 className="h5">Destinations</h2>
+                <div className="space-y-4">
+                    <h2 className="text-lg font-semibold">Destinations</h2>
                     <DestinationList
                         destinations={destinations}
                         currentUserId={user?.id}
@@ -153,8 +202,13 @@ export default function TripDashboard() {
                     />
                 </div>
 
-                <div className="col-md-4">
-                    <ScoreBoard scores={dashboard?.scores || []} />
+                <div className="space-y-4">
+                    <h2 className="text-lg font-semibold">Live scores</h2>
+                    <Card>
+                        <CardContent className="pt-5">
+                            <ScoreBoard scores={dashboard?.scores || []} />
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>

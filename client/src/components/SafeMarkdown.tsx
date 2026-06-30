@@ -17,7 +17,7 @@ export default function SafeMarkdown({ content }: SafeMarkdownProps) {
     }, [content]);
 
     if (!sanitized) {
-        return <p className="text-muted fst-italic">No instructions yet.</p>;
+        return <p className="text-sm italic text-muted-foreground">No instructions yet.</p>;
     }
 
     return (

@@ -1,9 +1,12 @@
+import { Trash2 } from 'lucide-react';
 import type { BudgetTier, Destination } from '@tripcrew/shared';
+import { Badge, type BadgeProps } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
-const TIER_COLORS: Record<BudgetTier, string> = {
+const TIER_VARIANT: Record<BudgetTier, BadgeProps['variant']> = {
     low: 'success',
     medium: 'warning',
-    high: 'danger',
+    high: 'destructive',
 };
 
 interface DestinationCardProps {
@@ -18,29 +21,33 @@ export default function DestinationCard({
     onDelete,
 }: DestinationCardProps) {
     return (
-        <div className="card mb-2">
-            <div className="card-body py-2">
-                <div className="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h3 className="h6 mb-1">{destination.name}</h3>
-                        {destination.description && (
-                            <p className="text-muted small mb-1">{destination.description}</p>
-                        )}
-                        <span
-                            className={`badge bg-${TIER_COLORS[destination.budgetTier] || 'secondary'}`}
-                        >
-                            {destination.budgetTier}
-                        </span>
-                    </div>
-                    {canDelete && (
-                        <button
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => onDelete(destination._id)}
-                        >
-                            Remove
-                        </button>
+        <div className="rounded-lg border bg-card p-3 transition-colors hover:border-primary/40">
+            <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                    <h3 className="font-medium">{destination.name}</h3>
+                    {destination.description && (
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                            {destination.description}
+                        </p>
                     )}
+                    <Badge
+                        variant={TIER_VARIANT[destination.budgetTier] || 'secondary'}
+                        className="mt-2 capitalize"
+                    >
+                        {destination.budgetTier}
+                    </Badge>
                 </div>
+                {canDelete && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => onDelete(destination._id)}
+                        aria-label="Remove destination"
+                    >
+                        <Trash2 className="size-4" />
+                    </Button>
+                )}
             </div>
         </div>
     );

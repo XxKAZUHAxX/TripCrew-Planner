@@ -4,10 +4,12 @@ Group trip planning web app. Friends create a trip, invite via link, propose des
 
 ## Stack
 
-- **Frontend:** React (Vite) + Bootstrap 5
-- **Backend:** Node.js + Express
+- **Frontend:** React (Vite) + TypeScript, Tailwind CSS v4 + shadcn-style UI
+- **Backend:** Node.js + Express + TypeScript
 - **Database:** MongoDB + Mongoose
 - **Auth:** JWT + bcrypt
+- **Shared:** `@tripcrew/shared` — type-only domain & API contracts
+- **Tooling:** Vitest, ESLint, Prettier
 
 ## Project layout
 

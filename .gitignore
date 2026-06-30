@@ -21,3 +21,6 @@ npm-debug.log*
 Thumbs.db
 .vscode/*
 !.vscode/extensions.json
+
+# Prompts
+tripcrew_agent_prompt.md

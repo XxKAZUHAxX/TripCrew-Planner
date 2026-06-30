@@ -1,9 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import type { Heatmap } from '@tripcrew/shared';
-import { getMyAvailability, saveAvailability, getHeatmap } from '../api/availability.api';
-import { getErrorMessage } from '../utils/errors';
-import CalendarGrid from '../components/CalendarGrid';
+import { getMyAvailability, saveAvailability, getHeatmap } from '@/api/availability.api';
+import { getErrorMessage } from '@/utils/errors';
+import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent } from '@/components/ui/card';
+import { PageLoader } from '@/components/ui/spinner';
+import CalendarGrid from '@/components/CalendarGrid';
 
 type DragMode = 'add' | 'remove';
 
@@ -31,9 +37,7 @@ export default function AvailabilityPage() {
     const [error, setError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
 
-    // Drag state: { active, mode: 'add'|'remove' }
     const dragRef = useRef<{ active: boolean; mode: DragMode }>({ active: false, mode: 'add' });
-
     const months = buildMonthRange();
 
     const loadData = useCallback(async () => {
@@ -92,8 +96,7 @@ export default function AvailabilityPage() {
         setSaved(false);
         try {
             await saveAvailability(tripId, [...myDates].sort());
-            const heat = await getHeatmap(tripId);
-            setHeatmap(heat);
+            setHeatmap(await getHeatmap(tripId));
             setSaved(true);
             setTimeout(() => setSaved(false), 1500);
         } catch (err) {
@@ -103,34 +106,46 @@ export default function AvailabilityPage() {
         }
     }
 
-    if (loading) return <div className="container py-5">Loading…</div>;
+    if (loading) return <PageLoader />;
 
     return (
-        <div className="container py-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-                <h1 className="h3 mb-0">When are you free?</h1>
-                <Link className="btn btn-outline-secondary btn-sm" to={`/trips/${tripId}`}>
-                    ← Back
+        <div className="mx-auto max-w-3xl px-4 py-8">
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <h1 className="text-2xl font-bold">When are you free?</h1>
+                <Link
+                    className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+                    to={`/trips/${tripId}`}
+                >
+                    <ArrowLeft className="size-4" />
+                    Back
                 </Link>
             </div>
-            {error && <div className="alert alert-danger">{error}</div>}
-            <p className="text-muted small">
+            {error && (
+                <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
+            <p className="mb-4 text-sm text-muted-foreground">
                 Click or drag to mark your available dates. Colors show group overlap. Changes save
                 automatically on mouse release.
+                {saving && <span className="ml-2 text-foreground">Saving…</span>}
+                {saved && <span className="ml-2 text-success">Saved!</span>}
             </p>
-            {saving && <p className="text-muted small">Saving…</p>}
-            {saved && <p className="text-success small">Saved!</p>}
-            {months.map(({ year, monthIndex }) => (
-                <CalendarGrid
-                    key={`${year}-${monthIndex}`}
-                    year={year}
-                    monthIndex={monthIndex}
-                    heatmap={heatmap}
-                    myDates={myDates}
-                    onMouseDown={handleMouseDown}
-                    onMouseEnter={handleMouseEnter}
-                />
-            ))}
+            <Card>
+                <CardContent className="pt-6">
+                    {months.map(({ year, monthIndex }) => (
+                        <CalendarGrid
+                            key={`${year}-${monthIndex}`}
+                            year={year}
+                            monthIndex={monthIndex}
+                            heatmap={heatmap}
+                            myDates={myDates}
+                            onMouseDown={handleMouseDown}
+                            onMouseEnter={handleMouseEnter}
+                        />
+                    ))}
+                </CardContent>
+            </Card>
         </div>
     );
 }

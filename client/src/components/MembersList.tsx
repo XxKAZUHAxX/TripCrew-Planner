@@ -1,4 +1,6 @@
+import { Crown } from 'lucide-react';
 import type { ArchetypeDefinitions, BadgeMap, UserRef } from '@tripcrew/shared';
+import { Badge } from '@/components/ui/badge';
 import BadgeChip from './BadgeChip';
 
 interface MembersListProps {
@@ -15,21 +17,22 @@ export default function MembersList({
     definitions = {},
 }: MembersListProps) {
     return (
-        <ul className="list-group">
+        <ul className="space-y-2">
             {members.map((m) => {
                 const memberBadges = badges[m._id] || [];
                 return (
-                    <li key={m._id} className="list-group-item">
-                        <div className="d-flex justify-content-between align-items-center">
-                            <span>
-                                {m.name}
-                                {m._id === creatorId && (
-                                    <span className="badge bg-dark ms-2">Host</span>
-                                )}
-                            </span>
+                    <li key={m._id} className="rounded-lg border bg-card p-3">
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium">{m.name}</span>
+                            {m._id === creatorId && (
+                                <Badge variant="secondary" className="gap-1">
+                                    <Crown className="size-3" />
+                                    Host
+                                </Badge>
+                            )}
                         </div>
                         {memberBadges.length > 0 && (
-                            <div className="d-flex flex-wrap gap-1 mt-1">
+                            <div className="mt-2 flex flex-wrap gap-1">
                                 {memberBadges.map((b) => (
                                     <BadgeChip key={b} label={b} description={definitions[b]} />
                                 ))}

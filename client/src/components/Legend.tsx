@@ -11,21 +11,15 @@ export default function Legend() {
         { color: '#0F6E56', label: `3+` },
     ];
     return (
-        <div className="d-flex align-items-center gap-2 mt-2">
-            <small className="text-muted">Members free:</small>
+        <div className="mt-3 flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">Members free:</span>
             {steps.map((s) => (
-                <span key={s.label} className="d-flex align-items-center gap-1">
+                <span key={s.label} className="flex items-center gap-1">
                     <span
-                        style={{
-                            width: 16,
-                            height: 16,
-                            display: 'inline-block',
-                            backgroundColor: s.color,
-                            border: '1px solid #dee2e6',
-                            borderRadius: 3,
-                        }}
+                        className="size-4 rounded border border-border"
+                        style={{ backgroundColor: s.color }}
                     />
-                    <small>{s.label}</small>
+                    <span className="text-xs text-muted-foreground">{s.label}</span>
                 </span>
             ))}
         </div>
