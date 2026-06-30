@@ -1,11 +1,13 @@
 import { Schema, model, type Model, type HydratedDocument, type Types } from 'mongoose';
 import { customAlphabet } from 'nanoid';
+import type { TripStatus } from '@tripcrew/shared';
+
+export type { TripStatus };
 
 // URL-safe, unambiguous alphabet for invite codes.
 const generateInviteCode = customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', 10);
 
-export const TRIP_STATUS = ['voting', 'decided', 'archived'] as const;
-export type TripStatus = (typeof TRIP_STATUS)[number];
+export const TRIP_STATUS: readonly TripStatus[] = ['voting', 'decided', 'archived'];
 
 // Checklist template: the shared task plus which members have completed it.
 // Per-member completion state == membership in completedBy[]. (Feature 4, Decision 2)

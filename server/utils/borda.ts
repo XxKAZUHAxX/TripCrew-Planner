@@ -3,18 +3,14 @@
 // earns (N - i) points. Unranked destinations earn 0.
 // A destination's score is the sum across every member's ballot.
 import type { HydratedDocument } from 'mongoose';
+import type { ScoredDestination } from '@tripcrew/shared';
 import type { IVote } from '../models/Vote.js';
-import type { IDestination, BudgetTier } from '../models/Destination.js';
+import type { IDestination } from '../models/Destination.js';
+
+export type { ScoredDestination };
 
 type VoteDoc = HydratedDocument<IVote>;
 type DestinationDoc = HydratedDocument<IDestination>;
-
-export interface ScoredDestination {
-    destId: string;
-    name: string;
-    budgetTier: BudgetTier;
-    score: number;
-}
 
 /** Returns a map of destinationId -> total Borda score. */
 export function computeBordaScores(

@@ -1,7 +1,8 @@
 import { Schema, model, type Types, type HydratedDocument } from 'mongoose';
+import type { BudgetTier } from '@tripcrew/shared';
 
-export const BUDGET_TIERS = ['low', 'medium', 'high'] as const;
-export type BudgetTier = (typeof BUDGET_TIERS)[number];
+export type { BudgetTier };
+export const BUDGET_TIERS: readonly BudgetTier[] = ['low', 'medium', 'high'];
 
 export interface IDestination {
     tripId: Types.ObjectId;

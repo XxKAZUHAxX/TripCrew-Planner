@@ -1,18 +1,19 @@
 import { addHours } from 'date-fns';
 import type { Types } from 'mongoose';
+import type { ArchetypeDefinitions, ArchetypeName, BadgeMap } from '@tripcrew/shared';
+
+export type { ArchetypeName };
 
 // Computes archetype badges per member from already-fetched trip data.
 // Badges are derived on-the-fly (never persisted) — see Feature 3 decision.
 
-export const ARCHETYPES = {
+export const ARCHETYPES: ArchetypeDefinitions = {
     'The Dictator': 'Has proposed more than 5 destinations for this trip.',
     'The Ghost': 'Has cast zero votes with the deadline looming (<24h).',
     'The Accountant': 'Every destination they proposed is budget-tier "low".',
     'The Overthinker': 'Has changed their vote ranking more than 3 times.',
     'The Hype Machine': 'Was the first to cast a vote for this trip.',
-} as const;
-
-export type ArchetypeName = keyof typeof ARCHETYPES;
+};
 
 type IdLike = Types.ObjectId | string;
 
@@ -45,7 +46,7 @@ export function computeArchetypes({
     votes,
     votingDeadline,
     now = new Date(),
-}: ArchetypeInput): Record<string, ArchetypeName[]> {
+}: ArchetypeInput): BadgeMap {
     const voteByUser = new Map<string, ArchetypeVote>();
     for (const v of votes) voteByUser.set(String(v.userId), v);
 
@@ -65,7 +66,7 @@ export function computeArchetypes({
         new Date(votingDeadline) >= now &&
         new Date(votingDeadline) <= addHours(now, 24);
 
-    const result: Record<string, ArchetypeName[]> = {};
+    const result: BadgeMap = {};
     for (const member of members) {
         const uid = String(member.id);
         const badges: ArchetypeName[] = [];
