@@ -82,6 +82,24 @@ export interface TripResponse {
     trip: Trip;
 }
 
+/** Lightweight, membership-free preview of a trip from an invite code. */
+export interface TripPreviewResponse {
+    title: string;
+    memberCount: number;
+    alreadyMember: boolean;
+    inviteActive: boolean;
+}
+
+/** Result of concluding voting (manually by host or auto after deadline). */
+export interface ConcludeResponse {
+    status: TripStatus;
+    /** Present when a clear winner was determined. */
+    winningDestinationId?: string;
+    /** True when the result is a tie/deadlock and the Wheel is required. */
+    wheel: boolean;
+    deadlock: DeadlockStatus;
+}
+
 // --- Destinations: /api/trips/:tripId/destinations ---------------------------
 
 export interface ProposeDestinationRequest {
@@ -132,6 +150,8 @@ export interface DashboardResponse {
     status: TripStatus;
     memberCount: number;
     voterCount: number;
+    /** Ids of members who have submitted a vote. */
+    votedMemberIds: string[];
 }
 
 // --- Availability: /api/trips/:tripId/availability ---------------------------
@@ -150,6 +170,24 @@ export interface MyAvailabilityResponse {
 }
 
 export type HeatmapResponse = Heatmap;
+
+/** A member who is available on a given date. */
+export interface AvailabilityMember {
+    id: string;
+    name: string;
+}
+
+/** One date and the members free on it (used by the "best dates" panel). */
+export interface AvailabilitySummaryEntry {
+    date: string;
+    members: AvailabilityMember[];
+}
+
+export interface AvailabilitySummaryResponse {
+    memberCount: number;
+    /** Sorted by availability count descending; only dates with >= 1 member. */
+    entries: AvailabilitySummaryEntry[];
+}
 
 // --- Wheel of Destiny: /api/trips/:tripId/wheel ------------------------------
 

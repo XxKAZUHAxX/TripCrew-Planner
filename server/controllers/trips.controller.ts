@@ -2,6 +2,10 @@ import type { Request, Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
 import Trip from '../models/Trip.js';
 import Destination from '../models/Destination.js';
+import Vote from '../models/Vote.js';
+import Availability from '../models/Availability.js';
+import { evaluateDeadlock } from '../utils/deadlock.js';
+import { rankByScore } from '../utils/borda.js';
 
 export async function createTrip(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -99,6 +103,144 @@ export async function toggleInvite(req: Request, res: Response, next: NextFuncti
         req.trip.inviteActive = inviteActive;
         await req.trip.save();
         res.json({ trip: req.trip });
+    } catch (err) {
+        next(err);
+    }
+}
+
+// Membership-free preview so an invitee can see what they're joining.
+export async function previewTrip(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const { inviteCode } = req.params;
+        const trip = await Trip.findOne({ inviteCode });
+        if (!trip) {
+            res.status(404).json({ message: 'This invite code is invalid or has expired.' });
+            return;
+        }
+        res.json({
+            title: trip.title,
+            memberCount: trip.members.length,
+            alreadyMember: trip.isMember(req.user.id),
+            inviteActive: trip.inviteActive,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+// Creator-only: permanently delete the trip and all associated data.
+export async function deleteTrip(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const trip = req.trip;
+        await Promise.all([
+            Destination.deleteMany({ tripId: trip._id }),
+            Vote.deleteMany({ tripId: trip._id }),
+            Availability.deleteMany({ tripId: trip._id }),
+        ]);
+        await trip.deleteOne();
+        res.json({ ok: true });
+    } catch (err) {
+        next(err);
+    }
+}
+
+// Non-creator member leaves the trip. Their vote/availability are removed.
+export async function leaveTrip(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const trip = req.trip;
+        if (trip.isCreator(req.user.id)) {
+            res.status(403).json({
+                message: 'The host cannot leave the trip. Delete the trip instead.',
+            });
+            return;
+        }
+        trip.members = trip.members.filter((m) => !m.equals(req.user.id)) as typeof trip.members;
+        await Promise.all([
+            trip.save(),
+            Vote.deleteOne({ tripId: trip._id, userId: req.user.id }),
+            Availability.deleteOne({ tripId: trip._id, userId: req.user.id }),
+        ]);
+        res.json({ ok: true });
+    } catch (err) {
+        next(err);
+    }
+}
+
+// Conclude voting: the host may end early anytime; any member may trigger the
+// post-deadline auto-resolution. A clear winner decides the trip; a tie routes
+// to the Wheel of Destiny (status stays 'voting').
+export async function concludeVoting(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try {
+        const trip = req.trip;
+        const [votes, destinations] = await Promise.all([
+            Vote.find({ tripId: trip._id }),
+            Destination.find({ tripId: trip._id }),
+        ]);
+        const deadlock = evaluateDeadlock(votes, destinations, {
+            memberCount: trip.members.length,
+            votingDeadline: trip.votingDeadline,
+        });
+        const deadlockStatus = {
+            eligible: deadlock.eligible,
+            tie: deadlock.tie,
+            timeout: deadlock.timeout,
+            slices: deadlock.slices,
+        };
+
+        // Already resolved — report current state idempotently.
+        if (trip.status !== 'voting') {
+            res.json({
+                status: trip.status,
+                winningDestinationId: trip.winningDestination
+                    ? String(trip.winningDestination)
+                    : undefined,
+                wheel: false,
+                deadlock: deadlockStatus,
+            });
+            return;
+        }
+
+        const isCreator = trip.isCreator(req.user.id);
+        const deadlinePassed = trip.votingDeadline
+            ? new Date() >= new Date(trip.votingDeadline)
+            : false;
+
+        // Non-hosts can only trigger auto-resolution once the deadline has passed.
+        if (!isCreator && !deadlinePassed) {
+            res.status(403).json({
+                message: 'Only the host can conclude voting before the deadline.',
+            });
+            return;
+        }
+
+        const ranked = rankByScore(votes, destinations);
+        const [first, second] = ranked;
+        const noClearWinner =
+            deadlock.tie ||
+            deadlock.timeout ||
+            !first ||
+            first.score <= 0 ||
+            Boolean(second && first.score === second.score);
+
+        // A tie/deadlock cannot be auto-decided — the Wheel is required.
+        if (noClearWinner) {
+            res.json({ status: 'voting', wheel: true, deadlock: deadlockStatus });
+            return;
+        }
+
+        trip.winningDestination = new Types.ObjectId(first!.destId);
+        trip.status = 'decided';
+        await trip.save();
+        res.json({
+            status: 'decided',
+            winningDestinationId: first!.destId,
+            wheel: false,
+            deadlock: deadlockStatus,
+        });
     } catch (err) {
         next(err);
     }

@@ -8,8 +8,9 @@ interface CalendarGridProps {
     monthIndex: number;
     heatmap: Heatmap;
     myDates: Set<string>;
-    onMouseDown: (key: string) => void;
-    onMouseEnter: (key: string) => void;
+    totalMembers?: number;
+    onPointerDown: (key: string) => void;
+    onPointerEnter: (key: string) => void;
 }
 
 export default function CalendarGrid({
@@ -17,8 +18,9 @@ export default function CalendarGrid({
     monthIndex,
     heatmap,
     myDates,
-    onMouseDown,
-    onMouseEnter,
+    totalMembers,
+    onPointerDown,
+    onPointerEnter,
 }: CalendarGridProps) {
     const cells = buildMonthCells(year, monthIndex);
 
@@ -27,7 +29,7 @@ export default function CalendarGrid({
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">
                 {MONTH_NAMES[monthIndex]} {year}
             </h3>
-            <div className="grid select-none grid-cols-7 gap-1">
+            <div className="grid touch-none select-none grid-cols-7 gap-1">
                 {WEEKDAY_LABELS.map((d) => (
                     <div
                         key={d}
@@ -42,12 +44,12 @@ export default function CalendarGrid({
                         cell={cell}
                         count={cell ? heatmap[cell.key] || 0 : 0}
                         selected={cell ? myDates.has(cell.key) : false}
-                        onMouseDown={onMouseDown}
-                        onMouseEnter={onMouseEnter}
+                        onPointerDown={onPointerDown}
+                        onPointerEnter={onPointerEnter}
                     />
                 ))}
             </div>
-            <Legend />
+            <Legend totalMembers={totalMembers} />
         </div>
     );
 }

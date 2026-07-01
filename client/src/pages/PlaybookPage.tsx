@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { ArrowLeft, Pencil, Trophy } from 'lucide-react';
 import type { ChecklistItem, Destination } from '@tripcrew/shared';
 import {
@@ -31,6 +32,7 @@ export default function PlaybookPage() {
     const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
     const [isCreator, setIsCreator] = useState(false);
     const [creatorId, setCreatorId] = useState<string | null>(null);
+    const [memberCount, setMemberCount] = useState(0);
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -41,6 +43,7 @@ export default function PlaybookPage() {
             setInstructions(pb.instructions);
             setWinningDest(pb.winningDestination);
             setChecklist(pb.checklist);
+            setMemberCount(detail.members.length);
             const cId = refId(detail.trip.creator) ?? null;
             setCreatorId(cId);
             setIsCreator(String(cId) === String(user?.id));
@@ -56,24 +59,43 @@ export default function PlaybookPage() {
     }, [load]);
 
     async function handleSaveInstructions(value: string) {
-        await updateInstructions(tripId, value);
-        setInstructions(value);
-        setEditing(false);
+        try {
+            await updateInstructions(tripId, value);
+            setInstructions(value);
+            setEditing(false);
+            toast.success('Instructions saved.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to save instructions'));
+        }
     }
 
     async function handleAddTask(label: string) {
-        await addTask(tripId, label);
-        await load();
+        try {
+            await addTask(tripId, label);
+            await load();
+            toast.success('Task added.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to add task'));
+        }
     }
 
     async function handleToggle(taskId: string) {
-        await toggleTask(tripId, taskId);
-        await load();
+        try {
+            await toggleTask(tripId, taskId);
+            await load();
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to update task'));
+        }
     }
 
     async function handleDelete(taskId: string) {
-        await deleteTask(tripId, taskId);
-        await load();
+        try {
+            await deleteTask(tripId, taskId);
+            await load();
+            toast.success('Task deleted.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to delete task'));
+        }
     }
 
     if (loading) return <PageLoader />;
@@ -143,6 +165,7 @@ export default function PlaybookPage() {
                         checklist={checklist}
                         currentUserId={user?.id}
                         creatorId={creatorId}
+                        totalMembers={memberCount}
                         onToggle={handleToggle}
                         onAdd={handleAddTask}
                         onDelete={handleDelete}

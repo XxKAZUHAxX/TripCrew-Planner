@@ -5,6 +5,7 @@ import {
     saveAvailability,
     getMyAvailability,
     getHeatmap,
+    getAvailabilitySummary,
 } from '../controllers/availability.controller.js';
 
 // Mounted at /api/trips/:tripId/availability
@@ -13,5 +14,6 @@ const router = Router({ mergeParams: true });
 router.put('/', requireAuth, requireMembership, saveAvailability);
 router.get('/me', requireAuth, requireMembership, getMyAvailability);
 router.get('/heatmap', requireAuth, requireMembership, getHeatmap);
+router.get('/summary', requireAuth, requireMembership, getAvailabilitySummary);
 
 export default router;

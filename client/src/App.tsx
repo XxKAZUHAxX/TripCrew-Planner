@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import NavBar from './components/NavBar';
@@ -12,12 +13,14 @@ import VotePage from './pages/VotePage';
 import AvailabilityPage from './pages/AvailabilityPage';
 import WheelPage from './pages/WheelPage';
 import PlaybookPage from './pages/PlaybookPage';
+import NotFound from './pages/NotFound';
 
 export default function App() {
     return (
         <AuthProvider>
             <BrowserRouter>
                 <NavBar />
+                <Toaster richColors position="top-center" />
                 <Routes>
                     <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
@@ -78,7 +81,7 @@ export default function App() {
                             </ProtectedRoute>
                         }
                     />
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="*" element={<NotFound />} />
                 </Routes>
             </BrowserRouter>
         </AuthProvider>

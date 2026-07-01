@@ -1,5 +1,6 @@
 import type {
     Availability,
+    AvailabilitySummaryResponse,
     Heatmap,
     MyAvailabilityResponse,
     SaveAvailabilityResponse,
@@ -20,5 +21,12 @@ export async function saveAvailability(tripId: string, dates: string[]): Promise
 
 export async function getHeatmap(tripId: string): Promise<Heatmap> {
     const { data } = await api.get<Heatmap>(`/trips/${tripId}/availability/heatmap`);
+    return data;
+}
+
+export async function getAvailabilitySummary(tripId: string): Promise<AvailabilitySummaryResponse> {
+    const { data } = await api.get<AvailabilitySummaryResponse>(
+        `/trips/${tripId}/availability/summary`
+    );
     return data;
 }

@@ -67,6 +67,7 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
             status: trip.status,
             memberCount: trip.members.length,
             voterCount: votes.length,
+            votedMemberIds: votes.map((v) => String(v.userId)),
         });
     } catch (err) {
         next(err);

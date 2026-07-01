@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import type { Destination, ScoredDestination, SpinResponse } from '@tripcrew/shared';
@@ -38,40 +38,74 @@ export default function WheelPage() {
     const [slices, setSlices] = useState<ScoredDestination[]>([]);
     const [eligible, setEligible] = useState(false);
     const [isCreator, setIsCreator] = useState(false);
+    const [hostName, setHostName] = useState<string | undefined>();
     const [phase, setPhase] = useState<Phase>('idle');
     const [winnerIndex, setWinnerIndex] = useState<number | null>(null);
     const [winner, setWinner] = useState<Winner>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const loadStatus = useCallback(async () => {
+        const [status, detail] = await Promise.all([getWheelStatus(tripId), getTrip(tripId)]);
+        setSlices(status.slices || []);
+        setEligible(status.eligible);
+        const creatorId = refId(detail.trip.creator);
+        setIsCreator(String(creatorId) === String(user?.id));
+        const host = detail.members.find((m) => String(m._id) === String(creatorId));
+        setHostName(host?.name);
+        if (detail.trip.status !== 'voting') {
+            setPhase((prev) => (prev === 'idle' ? 'finalized' : prev));
+            setWinner((prev) => prev ?? detail.trip.winningDestination);
+            return true;
+        }
+        return false;
+    }, [tripId, user?.id]);
 
     useEffect(() => {
         let active = true;
-        async function load() {
+        (async () => {
             try {
-                const [status, detail] = await Promise.all([
-                    getWheelStatus(tripId),
-                    getTrip(tripId),
-                ]);
-                if (!active) return;
-                setSlices(status.slices || []);
-                setEligible(status.eligible);
-                const creatorId = refId(detail.trip.creator);
-                setIsCreator(String(creatorId) === String(user?.id));
-                if (detail.trip.status !== 'voting') {
-                    setPhase('finalized');
-                    setWinner(detail.trip.winningDestination);
-                }
+                await loadStatus();
             } catch (err) {
                 if (active) setError(getErrorMessage(err, 'Failed to load'));
             } finally {
                 if (active) setLoading(false);
             }
-        }
-        load();
+        })();
         return () => {
             active = false;
         };
-    }, [tripId, user?.id]);
+    }, [loadStatus]);
+
+    // Non-creators poll (Issue 11) so they see the result once the host spins.
+    useEffect(() => {
+        if (isCreator || phase === 'finalized') return;
+        let active = true;
+        const id = setInterval(async () => {
+            try {
+                const decided = await loadStatus();
+                if (decided && active) clearInterval(id);
+            } catch {
+                /* transient — keep polling */
+            }
+        }, 10000);
+        return () => {
+            active = false;
+            clearInterval(id);
+        };
+    }, [isCreator, phase, loadStatus]);
+
+    async function handleRefresh() {
+        setRefreshing(true);
+        try {
+            await loadStatus();
+        } catch (err) {
+            setError(getErrorMessage(err, 'Failed to refresh'));
+        } finally {
+            setRefreshing(false);
+        }
+    }
 
     // Server picks the winner first; we animate to the returned index.
     async function handleSpin() {
@@ -132,6 +166,9 @@ export default function WheelPage() {
                         isCreator={isCreator}
                         onSpin={handleSpin}
                         spinning={phase === 'spinning'}
+                        hostName={hostName}
+                        onRefresh={handleRefresh}
+                        refreshing={refreshing}
                     />
 
                     {phase === 'finalized' && winner && (
@@ -140,6 +177,11 @@ export default function WheelPage() {
                             onClose={() => navigate(`/trips/${tripId}/playbook`)}
                         />
                     )}
+
+                    <p className="mt-6 text-center text-xs text-muted-foreground">
+                        If the host does not spin within 12 hours of the deadline, the wheel will
+                        spin automatically.
+                    </p>
                 </CardContent>
             </Card>
         </div>

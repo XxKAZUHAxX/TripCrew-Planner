@@ -8,15 +8,23 @@ import {
     updateTrip,
     joinTrip,
     toggleInvite,
+    previewTrip,
+    deleteTrip,
+    leaveTrip,
+    concludeVoting,
 } from '../controllers/trips.controller.js';
 
 const router = Router();
 
 router.post('/', requireAuth, createTrip);
 router.get('/', requireAuth, listMyTrips);
+router.get('/preview/:inviteCode', requireAuth, previewTrip);
 router.post('/join/:inviteCode', requireAuth, joinTrip);
 router.get('/:tripId', requireAuth, requireMembership, getTrip);
 router.patch('/:tripId', requireAuth, requireMembership, requireCreator, updateTrip);
+router.delete('/:tripId', requireAuth, requireMembership, requireCreator, deleteTrip);
+router.post('/:tripId/leave', requireAuth, requireMembership, leaveTrip);
+router.post('/:tripId/conclude', requireAuth, requireMembership, concludeVoting);
 router.patch('/:tripId/invite', requireAuth, requireMembership, requireCreator, toggleInvite);
 
 export default router;

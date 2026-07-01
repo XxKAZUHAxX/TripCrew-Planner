@@ -1,3 +1,4 @@
+import { Hourglass, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ChaosButtonProps {
@@ -5,11 +6,39 @@ interface ChaosButtonProps {
     isCreator: boolean;
     onSpin: () => void;
     spinning: boolean;
+    /** Host's display name, shown to non-creators while waiting (Issue 11). */
+    hostName?: string;
+    /** Lets non-creators re-check whether the host has spun (Issue 11). */
+    onRefresh?: () => void;
+    refreshing?: boolean;
 }
 
-// The Chaos Button — only visible/interactive for the trip creator when deadlock is eligible.
-export default function ChaosButton({ eligible, isCreator, onSpin, spinning }: ChaosButtonProps) {
-    if (!isCreator) return null;
+// The Chaos Button — creator spins; non-creators see a waiting state (Issue 11).
+export default function ChaosButton({
+    eligible,
+    isCreator,
+    onSpin,
+    spinning,
+    hostName,
+    onRefresh,
+    refreshing,
+}: ChaosButtonProps) {
+    if (!isCreator) {
+        return (
+            <div className="my-6 flex flex-col items-center gap-3 text-center">
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Hourglass className="size-4" />
+                    Waiting for {hostName || 'the host'} to spin the Wheel of Destiny…
+                </p>
+                {onRefresh && (
+                    <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
+                        <RefreshCw className="size-4" />
+                        {refreshing ? 'Checking…' : 'Refresh'}
+                    </Button>
+                )}
+            </div>
+        );
+    }
     return (
         <div className="my-6 text-center">
             <Button
@@ -24,8 +53,7 @@ export default function ChaosButton({ eligible, isCreator, onSpin, spinning }: C
             </Button>
             {!eligible && (
                 <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-                    The wheel unlocks when there is a tied score or the deadline passes with low
-                    turnout.
+                    Available when votes are tied or not enough members have voted by the deadline.
                 </p>
             )}
         </div>

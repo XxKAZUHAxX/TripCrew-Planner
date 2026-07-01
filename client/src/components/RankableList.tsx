@@ -11,9 +11,16 @@ interface RankableListProps {
     ranked: RankableItem[];
     unranked: RankableItem[];
     onRankingChange: (orderedIds: string[]) => void;
+    /** Read-only mode hides the reorder / add / remove controls (Issue 6). */
+    readOnly?: boolean;
 }
 
-export default function RankableList({ ranked, unranked, onRankingChange }: RankableListProps) {
+export default function RankableList({
+    ranked,
+    unranked,
+    onRankingChange,
+    readOnly = false,
+}: RankableListProps) {
     function moveUp(index: number) {
         if (index === 0) return;
         const next = [...ranked];
@@ -61,46 +68,48 @@ export default function RankableList({ ranked, unranked, onRankingChange }: Rank
                                     </span>
                                     {d.name}
                                 </span>
-                                <div className="flex items-center gap-1">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="size-7"
-                                        onClick={() => moveUp(i)}
-                                        disabled={i === 0}
-                                        aria-label="Move up"
-                                    >
-                                        <ChevronUp className="size-4" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="size-7"
-                                        onClick={() => moveDown(i)}
-                                        disabled={i === ranked.length - 1}
-                                        aria-label="Move down"
-                                    >
-                                        <ChevronDown className="size-4" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="size-7 text-muted-foreground hover:text-destructive"
-                                        onClick={() => removeFromRanked(d)}
-                                        aria-label="Remove"
-                                    >
-                                        <X className="size-4" />
-                                    </Button>
-                                </div>
+                                {!readOnly && (
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="size-7"
+                                            onClick={() => moveUp(i)}
+                                            disabled={i === 0}
+                                            aria-label="Move up"
+                                        >
+                                            <ChevronUp className="size-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="size-7"
+                                            onClick={() => moveDown(i)}
+                                            disabled={i === ranked.length - 1}
+                                            aria-label="Move down"
+                                        >
+                                            <ChevronDown className="size-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="size-7 text-muted-foreground hover:text-destructive"
+                                            onClick={() => removeFromRanked(d)}
+                                            aria-label="Remove"
+                                        >
+                                            <X className="size-4" />
+                                        </Button>
+                                    </div>
+                                )}
                             </li>
                         ))}
                     </ol>
                 </div>
             )}
-            {unranked.length > 0 && (
+            {unranked.length > 0 && !readOnly && (
                 <div>
                     <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-                        Unranked (won&apos;t count)
+                        Not yet ranked — move items above this line to include them in your vote.
                     </h3>
                     <ul className="space-y-2">
                         {unranked.map((d) => (
@@ -115,6 +124,9 @@ export default function RankableList({ ranked, unranked, onRankingChange }: Rank
                             </li>
                         ))}
                     </ul>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                        Items here receive no points toward the vote.
+                    </p>
                 </div>
             )}
         </div>

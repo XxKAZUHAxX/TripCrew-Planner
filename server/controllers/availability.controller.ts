@@ -61,3 +61,50 @@ export async function getHeatmap(req: Request, res: Response, next: NextFunction
         next(err);
     }
 }
+
+// Per-date breakdown with member names, for the "Best dates for your group" panel.
+export async function getAvailabilitySummary(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try {
+        const tripId = new mongoose.Types.ObjectId(req.trip._id);
+        const rows = await Availability.aggregate([
+            { $match: { tripId } },
+            { $unwind: '$dates' },
+            { $group: { _id: '$dates', userIds: { $addToSet: '$userId' } } },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userIds',
+                    foreignField: '_id',
+                    as: 'users',
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    date: '$_id',
+                    members: {
+                        $map: {
+                            input: '$users',
+                            as: 'u',
+                            in: { id: '$$u._id', name: '$$u.name' },
+                        },
+                    },
+                },
+            },
+        ]);
+        const entries = rows
+            .map((r: { date: string; members: { id: unknown; name: string }[] }) => ({
+                date: r.date,
+                members: r.members.map((m) => ({ id: String(m.id), name: m.name })),
+            }))
+            .filter((e) => e.members.length > 0)
+            .sort((a, b) => b.members.length - a.members.length || a.date.localeCompare(b.date));
+        res.json({ memberCount: req.trip.members.length, entries });
+    } catch (err) {
+        next(err);
+    }
+}

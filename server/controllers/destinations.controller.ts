@@ -13,6 +13,10 @@ export async function proposeDestination(
             res.status(400).json({ message: 'name is required' });
             return;
         }
+        if (req.trip.status !== 'voting') {
+            res.status(403).json({ message: 'Destination proposals are closed for this trip.' });
+            return;
+        }
         if (budgetTier && !BUDGET_TIERS.includes(budgetTier)) {
             res.status(400).json({
                 message: `budgetTier must be one of ${BUDGET_TIERS.join(', ')}`,
