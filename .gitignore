@@ -23,5 +23,6 @@ Thumbs.db
 !.vscode/extensions.json
 
 # Prompts and notes
+notes.md
 tripcrew_agent_prompt.md
 ui-ux-agent-prompt.md

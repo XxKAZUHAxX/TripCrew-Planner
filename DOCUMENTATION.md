@@ -8,7 +8,7 @@
 4. [Prerequisites](#4-prerequisites)
 5. [Environment Setup](#5-environment-setup)
 6. [Running the Application](#6-running-the-application)
-7. [Running the Backend Smoke Tests](#7-running-the-backend-smoke-tests)
+7. [Running the Tests](#7-running-the-tests)
 8. [API Reference](#8-api-reference)
 9. [Feature Guides](#9-feature-guides)
     - [9.1 Authentication](#91-authentication)
@@ -56,6 +56,7 @@ TripCrew is a **group trip planning web application**. It solves the real-world 
 | Invite codes | nanoid                                                   |
 | Date logic   | date-fns                                                 |
 | Markdown     | marked + DOMPurify (XSS sanitization)                    |
+| Toasts       | sonner                                                   |
 | Tooling      | Vitest, ESLint, Prettier                                 |
 
 ---
@@ -108,7 +109,8 @@ tripcrew/
 │       │   └── useAuth.ts         Consumes AuthContext
 │       ├── components/
 │       │   ├── ui/                shadcn-style primitives (button, card, input,
-│       │   │                      label, textarea, badge, alert, skeleton, spinner)
+│       │   │                      label, textarea, badge, alert, skeleton, spinner,
+│       │   │                      tooltip, progress, confirm-dialog)
 │       │   ├── ProtectedRoute.tsx  Redirects unauthenticated users to /login
 │       │   ├── NavBar.tsx
 │       │   ├── AuthForm.tsx
@@ -124,6 +126,7 @@ tripcrew/
 │       │   ├── Legend.tsx          Heatmap color scale key
 │       │   ├── WheelCanvas.tsx     Canvas wheel + CSS spin animation
 │       │   ├── WinnerBanner.tsx    Post-spin celebratory banner
+│       │   ├── DeadlineBadge.tsx   Voting deadline display with live countdown
 │       │   ├── SafeMarkdown.tsx    Markdown renderer (DOMPurify-sanitized)
 │       │   ├── MarkdownEditor.tsx  Creator's textarea for instructions
 │       │   ├── Checklist.tsx       Shared task list with per-member state
@@ -138,13 +141,17 @@ tripcrew/
 │       │   ├── VotePage.tsx
 │       │   ├── AvailabilityPage.tsx
 │       │   ├── WheelPage.tsx
-│       │   └── PlaybookPage.tsx
+│       │   ├── PlaybookPage.tsx
+│       │   └── NotFound.tsx
 │       └── utils/
 │           ├── colorScale.ts   Heatmap count → hex color
 │           ├── dateKeys.ts     UTC date utilities + month grid builder
 │           ├── borda.ts        Client-side Borda point helper
 │           ├── errors.ts       getErrorMessage (typed Axios errors)
-│           └── refs.ts         refId (populated-vs-id duality)
+│           ├── refs.ts         refId (populated-vs-id duality)
+│           ├── budget.ts       Budget tier labels and metadata
+│           ├── deadline.ts     Deadline formatting and countdown helpers
+│           └── tripStatus.ts   Trip status display labels
 │
 └── server/                   Express + TypeScript API
     ├── server.ts             Entry point (boots DB + app)
@@ -333,17 +340,14 @@ database needed) and exercise every API route end-to-end.
 ```powershell
 # Backend integration suites
 cd "D:\Projects\TripCrew Planner\server"
-npm test             # runs every smoke/*.smoke.test.ts suite
-npm run test:watch   # watch mode
+npm test
 
 # Frontend unit/component tests (Vitest + Testing Library)
 cd "D:\Projects\TripCrew Planner\client"
 npm test
 ```
 
-Vitest exits with a non-zero code if any assertion fails.
-
-All suites should pass on a clean install.
+All suites should pass on a clean install. If you run the server tests in parallel they may produce a spurious worker crash due to concurrent in-memory MongoDB instances — run `npx vitest run --no-file-parallelism` to avoid this.
 
 ---
 
@@ -371,15 +375,19 @@ Authorization: Bearer <jwt_token>
 
 ### Trips — `/api/trips`
 
-| Method | Path                 | Auth | Member | Creator | Description                                |
-| ------ | -------------------- | ---- | ------ | ------- | ------------------------------------------ |
-| POST   | `/`                  | Yes  | —      | —       | Create a trip                              |
-| GET    | `/`                  | Yes  | —      | —       | List trips you are a member of             |
-| GET    | `/:tripId`           | Yes  | Yes    | —       | Get full trip detail + destinations        |
-| PATCH  | `/:tripId`           | Yes  | Yes    | Yes     | Edit title / dates / voting deadline       |
-| POST   | `/join/:inviteCode`  | Yes  | —      | —       | Join a trip via invite code                |
-| PATCH  | `/:tripId/invite`    | Yes  | Yes    | Yes     | Toggle `inviteActive` (enable/revoke link) |
-| GET    | `/:tripId/dashboard` | Yes  | Yes    | —       | Scores + badges + deadlock status          |
+| Method | Path                   | Auth | Member | Creator | Description                                            |
+| ------ | ---------------------- | ---- | ------ | ------- | ------------------------------------------------------ |
+| POST   | `/`                    | Yes  | —      | —       | Create a trip                                          |
+| GET    | `/`                    | Yes  | —      | —       | List trips you are a member of                         |
+| GET    | `/:tripId`             | Yes  | Yes    | —       | Get full trip detail + destinations                    |
+| PATCH  | `/:tripId`             | Yes  | Yes    | Yes     | Edit title / dates / voting deadline                   |
+| GET    | `/preview/:inviteCode` | Yes  | —      | —       | Preview a trip's name and member count before joining  |
+| POST   | `/join/:inviteCode`    | Yes  | —      | —       | Join a trip via invite code                            |
+| PATCH  | `/:tripId/invite`      | Yes  | Yes    | Yes     | Toggle `inviteActive` (enable/revoke link)             |
+| DELETE | `/:tripId`             | Yes  | Yes    | Yes     | Delete a trip and all its data (host only)             |
+| POST   | `/:tripId/leave`       | Yes  | Yes    | —       | Leave a trip (non-creator members only)                |
+| POST   | `/:tripId/conclude`    | Yes  | Yes    | —       | Conclude voting; host any time, members after deadline |
+| GET    | `/:tripId/dashboard`   | Yes  | Yes    | —       | Scores + badges + deadlock status                      |
 
 **Create trip body:**
 
@@ -429,11 +437,12 @@ Authorization: Bearer <jwt_token>
 
 ### Availability — `/api/trips/:tripId/availability`
 
-| Method | Path       | Auth | Member | Description                                  |
-| ------ | ---------- | ---- | ------ | -------------------------------------------- |
-| PUT    | `/`        | Yes  | Yes    | Save (upsert) your available dates           |
-| GET    | `/me`      | Yes  | Yes    | Get your currently saved dates               |
-| GET    | `/heatmap` | Yes  | Yes    | Aggregated count per date across all members |
+| Method | Path       | Auth | Member | Description                                         |
+| ------ | ---------- | ---- | ------ | --------------------------------------------------- |
+| PUT    | `/`        | Yes  | Yes    | Save (upsert) your available dates                  |
+| GET    | `/me`      | Yes  | Yes    | Get your currently saved dates                      |
+| GET    | `/heatmap` | Yes  | Yes    | Aggregated count per date across all members        |
+| GET    | `/summary` | Yes  | Yes    | Dates ranked by availability, with member name list |
 
 **Save dates body:**
 
@@ -449,6 +458,26 @@ Authorization: Bearer <jwt_token>
 ```json
 { "2026-07-04": 3, "2026-07-05": 5, "2026-07-06": 2 }
 ```
+
+**Summary response:**
+
+```json
+{
+    "memberCount": 5,
+    "entries": [
+        {
+            "date": "2026-07-05",
+            "members": [
+                { "id": "...", "name": "Alice" },
+                { "id": "...", "name": "Bob" }
+            ]
+        },
+        { "date": "2026-07-04", "members": [{ "id": "...", "name": "Alice" }] }
+    ]
+}
+```
+
+Entries are sorted descending by member count. Dates with no members are omitted.
 
 ---
 
@@ -513,7 +542,8 @@ Authorization: Bearer <jwt_token>
     },
     "status": "voting",
     "memberCount": 3,
-    "voterCount": 2
+    "voterCount": 2,
+    "votedMemberIds": ["<userId1>", "<userId2>"]
 }
 ```
 
@@ -564,7 +594,7 @@ Authorization: Bearer <jwt_token>
 
 1. Go to **http://localhost:5173/login**.
 2. Enter your email and password.
-3. The JWT is stored in `localStorage` under the key `tripcrew_token` and attached to every subsequent API request via an Axios interceptor.
+3. The JWT is stored in `localStorage` and attached to every subsequent API request automatically.
 
 **Logging out:**
 
@@ -596,9 +626,13 @@ Authorization: Bearer <jwt_token>
 voting  →  decided  →  archived
 ```
 
-- `voting` — the default state; voting is open.
-- `decided` — set when the wheel is spun; the Playbook unlocks.
+- `voting` — the default state; voting is open and destinations can be proposed.
+- `decided` — set when voting is concluded; the Playbook unlocks and destination proposals are closed.
 - `archived` — set manually (future use).
+
+**Concluding voting:**
+
+The host can click **Conclude voting now** on the dashboard at any time to end voting early and determine the winner based on current votes. If the voting deadline passes, the result is calculated automatically on the next page load. Concluding sends members to the Playbook (clear winner) or the Wheel of Destiny (tie or insufficient votes).
 
 ---
 
@@ -614,7 +648,8 @@ voting  →  decided  →  archived
 
 1. The recipient opens the link in their browser.
 2. If they are not logged in, they are redirected to `/login` and then back to the join page.
-3. They click **Join this trip** to become a member.
+3. The join page shows a **trip preview** — the trip name and how many members have already joined — before committing.
+4. They click **Join this trip** to become a member. If they are already a member, the button navigates directly to the trip dashboard.
 
 **Revoking the link (host only):**
 
@@ -674,6 +709,14 @@ Scores: Tokyo = 3+2+3 = **8**, Bali = 2+3+1 = **6**, Oslo = 1+1+2 = **4**
 - You can update your vote any number of times.
 - Each update increments your `changeCount` (used for the Overthinker badge).
 
+**Voting lock:**
+
+- Once the trip status becomes `decided`, the vote page becomes read-only. Rankings are displayed but cannot be changed and the Save button is hidden.
+
+**Partial vote warning:**
+
+- If you save while some destinations are unranked, a confirmation dialog warns you that unranked items receive no points. You can proceed or cancel to finish ranking first.
+
 ---
 
 ### 9.6 Trip Dashboard & Live Scores
@@ -682,13 +725,17 @@ The dashboard (`/trips/:tripId`) is the central hub and loads all data in **one 
 
 It shows:
 
-- **Trip title** and current status badge.
-- **ScoreBoard** — all destinations ranked by Borda score with a proportional progress bar.
+- **Trip title** and current status badge ("🗳️ Voting in progress", "✅ Destination decided", "📦 Archived").
+- **ScoreBoard** — destinations ranked by Borda score, with the winner highlighted once decided.
+- **Voting deadline badge** — displays the deadline date; switches to a live countdown when fewer than 48 hours remain, and shows "Deadline has passed" once expired.
+- **Voted indicator** — a vote icon next to each member who has submitted their ranking, plus a "X of Y members have voted" tally beneath the scoreboard.
 - **Members list** — each member with their current archetype badges.
-- **Destinations** — all proposals with budget tier labels.
-- **Navigation links** to Vote, Heatmap, Wheel, and Playbook pages.
-- **Chaos Button** — visible only to the trip creator when a deadlock is detected.
-- **Invite link** — for sharing.
+- **Destinations** — all proposals with budget tier labels; the proposal form is disabled once voting concludes.
+- **Navigation links** — Vote (disabled with tooltip when decided), Availability, Wheel of Destiny (when eligible), and Playbook.
+- **Conclude voting now** button (host only, while `voting`) — ends voting early; navigates to the Playbook on a clear winner, or the Wheel of Destiny on a tie.
+- **Leave trip** button (non-host members) — removes you from the trip after confirmation.
+- **Delete trip** button (host only) — permanently deletes the trip and all its data after confirmation.
+- **Invite link** — copy button; host can deactivate or reactivate the link (deactivation requires confirmation).
 
 > The dashboard uses a **refresh-on-load** model (no sockets). Scores and badges update each time the page is visited or after a mutating action returns.
 
@@ -717,10 +764,10 @@ A member can hold **multiple badges simultaneously**. Members **can see their ow
 **How to mark your availability:**
 
 1. Go to `/trips/:tripId/availability`.
-2. A calendar grid shows the **current month + 2 future months**.
-3. **Click** a date to toggle it; **click and drag** to select/deselect multiple dates in one gesture.
+2. A calendar grid shows one month at a time. Use the **← / →** arrows to navigate up to **6 months ahead** from the current month.
+3. **Tap or click** a date to toggle it; **drag** across multiple dates to select or deselect them in one gesture. Touch devices are fully supported.
 4. Your selected dates are outlined in blue.
-5. Selections **save automatically** when you release the mouse.
+5. Selections **save automatically** when you release (pointer or touch up).
 
 **Reading the heatmap:**
 
@@ -733,10 +780,13 @@ A member can hold **multiple badges simultaneously**. Members **can see their ow
 | Teal        | `#5DCAA5` | 2 members free  |
 | Dark green  | `#0F6E56` | 3+ members free |
 
-- Hover over any cell to see the exact date and count in a tooltip.
-- The **Legend** below each month grid shows the color scale.
+- The **Legend** below the calendar shows the color scale with labels that adapt to the total member count (e.g. "All 5 available").
 
-**Data model:** Each member's availability is stored as its own document in a separate collection. Updating one member never touches another's data.
+**Best dates panel:**
+
+Below the calendar is a **Best dates for your group** collapsible panel. It lists dates sorted by availability count, and hovering a row shows which members are free on that day. This makes it easy to spot the best travel window without reading individual heatmap cells.
+
+**Data model:** Each member's availability is stored as a separate document. Updating one member never touches another's data.
 
 ---
 
@@ -760,11 +810,19 @@ The Chaos Button appears (for the host only) when **either** of these conditions
 
 > **Why server-first?** This prevents the wheel from visually landing on one destination while the server records a different one.
 
+**Non-creator experience:**
+
+- Non-creator members see a waiting message: "Waiting for [host name] to spin the Wheel of Destiny…" with a **Refresh** button to manually re-check.
+- The page also polls automatically every 10 seconds in the background. Once the result is in, the winner banner appears for everyone without a manual refresh.
+
 **After the spin:**
 
 - The trip status changes to `decided`.
+- The winner banner appears for **all members**.
 - The Playbook immediately becomes accessible.
 - No further spinning is possible on that trip.
+
+> If the host does not spin within 12 hours of the voting deadline, the wheel spins automatically.
 
 ---
 
@@ -814,8 +872,6 @@ POST /api/trips/:tripId/wheel/spin
   → spinWheel controller
 ```
 
-**Firebase Auth migration path:** Only `auth.middleware.js` needs to be rewritten to verify a Firebase ID token instead of a JWT. All downstream middleware and controllers are completely unaffected.
-
 ---
 
 ## 11. Frontend Page Map
@@ -832,6 +888,7 @@ POST /api/trips/:tripId/wheel/spin
 | `/trips/:tripId/availability` | Trip member   | Click-drag calendar heatmap              |
 | `/trips/:tripId/wheel`        | Trip member*  | Wheel animation; spin button (host only) |
 | `/trips/:tripId/playbook`     | Trip member†  | Instructions + checklist                 |
+| `*` (any unmatched path)      | Public        | 404 — Page not found                     |
 
 \* All members can view the wheel page; only the host can trigger a spin.  
 † Redirects / returns `403` until `trip.status === "decided"`.
@@ -933,7 +990,7 @@ location / {
 
 ### Playbook returns `403`
 
-- The trip status is still `"voting"`. The playbook unlocks only after the winning destination is decided (via wheel spin or when status is manually advanced).
+- The trip status is still `"voting"`. The playbook unlocks only after the winning destination is decided (via the Conclude voting action or the Wheel of Destiny spin).
 
 ### `Failed to load` on the heatmap with no data
 
@@ -946,7 +1003,3 @@ location / {
     cd "D:\Projects\TripCrew Planner\server"
     npm test
     ```
-
-### `passwordHash` appears in API response
-
-- The `User` model uses `select: false` on `passwordHash`. If you see it in a response, a query is explicitly selecting it (e.g., `.select('+passwordHash')`), which is intentional only during login. The `toSafeJSON()` method never includes it.
