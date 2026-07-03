@@ -1,0 +1,30 @@
+# flyctl launch added from .gitignore
+# Dependencies
+**/node_modules
+**/client/node_modules
+**/server/node_modules
+
+# Environment
+**/.env
+**/client/.env
+**/server/.env
+
+# Build output
+**/client/dist
+**/dist
+
+# Logs
+**/*.log
+**/npm-debug.log*
+
+# OS / editor
+**/.DS_Store
+**/Thumbs.db
+**/.vscode/*
+!**/.vscode/extensions.json
+
+# Prompts and notes
+**/notes.md
+**/tripcrew_agent_prompt.md
+**/ui-ux-agent-prompt.md
+fly.toml
