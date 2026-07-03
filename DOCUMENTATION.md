@@ -24,7 +24,7 @@
 10. [Authorization Rules](#10-authorization-rules)
 11. [Frontend Page Map](#11-frontend-page-map)
 12. [Codebase Walkthrough](#12-codebase-walkthrough)
-13. [Deployment Notes](#13-deployment-notes)
+13. [Deployment](#13-deployment)
 14. [Common Issues & Troubleshooting](#14-common-issues--troubleshooting)
 
 ---
@@ -935,31 +935,565 @@ router.patch(
 
 ---
 
-## 13. Deployment Notes
+## 13. Deployment
 
-### Server (Node/Express)
+TripCrew has three runtime pieces that each need a home:
 
-1. Set `NODE_ENV=production` in your environment.
-2. Build first (`npm run build`), then run the compiled output with a process manager (e.g., PM2): `pm2 start dist/server.js`.
-3. Set `CLIENT_ORIGIN` to your production frontend domain (e.g., `https://tripcrew.example.com`).
-4. Use MongoDB Atlas or a managed MongoDB provider.
-5. Store `JWT_SECRET` and `MONGODB_URI` as environment variables in your hosting platform — **never commit `.env` to source control**.
+| Piece        | Built form                           | What it needs                               |
+| ------------ | ------------------------------------ | ------------------------------------------- |
+| **Frontend** | `client/dist/` static files          | Any static file host (Netlify, Nginx, etc.) |
+| **Backend**  | `server/dist/server.js` Node process | A server that can run Node 18+              |
+| **Database** | MongoDB                              | MongoDB Atlas free tier OR a local `mongod` |
 
-### Client (React/Vite)
+All options below are **completely free**. Pick the one that fits your situation:
 
-1. Set `VITE_API_BASE_URL` to your production API URL (e.g., `https://api.tripcrew.example.com/api`).
-2. Run `npm run build` to produce `client/dist/`.
-3. Serve `client/dist/` with any static host (Vercel, Netlify, Nginx, etc.).
-4. Configure the host to serve `index.html` for all routes (SPA fallback).
+| Option                                  | Always on?             | Complexity      | Hardware   | Best for                            |
+| --------------------------------------- | ---------------------- | --------------- | ---------- | ----------------------------------- |
+| **A — Render + Netlify**                | No (15 min idle sleep) | ⭐ Easiest      | None       | Quickest cloud setup                |
+| **B — Fly.io + Netlify**                | Yes                    | ⭐⭐ Medium     | None       | Always-on, no hardware              |
+| **C — Raspberry Pi 5 (full self-host)** | Yes                    | ⭐⭐⭐ Involved | RPi 5 8 GB | Full control, zero cloud dependency |
+| **D — Pi backend + Netlify frontend**   | Yes                    | ⭐⭐ Medium     | RPi 5 8 GB | Best of both worlds                 |
 
-### Nginx SPA fallback example
+> **Never commit `.env` files.** All secrets (`JWT_SECRET`, `MONGODB_URI`) must be injected as environment variables on the hosting platform, not checked into source control.
+
+---
+
+### Pre-requisite for all options — MongoDB Atlas Free Tier
+
+MongoDB Atlas M0 is free forever (512 MB storage, enough for a personal trip planner).
+
+1. Go to [cloud.mongodb.com](https://cloud.mongodb.com) → create a free account.
+2. Click **Create** → choose **M0 Free** → pick any region.
+3. Under **Database Access**: add a database user (e.g. `tripcrew`) with a strong password. Save it.
+4. Under **Network Access**: click **Add IP Address → Allow Access from Anywhere** (`0.0.0.0/0`).
+    > For the Raspberry Pi option you can tighten this to your Pi's public IP later.
+5. Click **Connect → Drivers → Node.js**. Copy the connection string — it looks like:
+    ```
+    mongodb+srv://tripcrew:<password>@cluster0.xxxxx.mongodb.net/tripcrew?retryWrites=true&w=majority
+    ```
+    Replace `<password>` with your DB user's password. Keep this URI handy — every option below uses it as `MONGODB_URI`.
+
+---
+
+### Option A — Render (backend) + Netlify (frontend)
+
+Render and Netlify both pull directly from GitHub and rebuild on every push. This is the easiest path from zero to a live public URL.
+
+**Limitation:** Render's free Web Services sleep after 15 minutes of no traffic. The first request after a sleep takes ~30 seconds to warm up. Fine for a small group of friends who are actively using it.
+
+#### A1. Push the whole monorepo to GitHub
+
+The entire project (`client/`, `server/`, and `shared/`) must be in one GitHub repository.
+
+```powershell
+# From the project root
+git init
+git add .
+git commit -m "initial commit"
+git remote add origin https://github.com/<you>/<repo>.git
+git push -u origin main
+```
+
+#### A2. Deploy the backend on Render
+
+1. Go to [render.com](https://render.com) → sign up (free) → **New → Web Service**.
+2. Connect your GitHub account and select the TripCrew repo.
+3. Fill in the form:
+
+    | Field              | Value                          |
+    | ------------------ | ------------------------------ |
+    | **Name**           | `tripcrew-api`                 |
+    | **Root Directory** | `server`                       |
+    | **Runtime**        | `Node`                         |
+    | **Build Command**  | `npm install && npm run build` |
+    | **Start Command**  | `node dist/server.js`          |
+    | **Instance Type**  | Free                           |
+
+    > Render clones the full monorepo, so the `file:../shared` dependency in `server/package.json` resolves correctly — `../shared` exists alongside `server/` in the clone.
+
+4. Under **Environment Variables**, add:
+
+    | Key              | Value                                                 |
+    | ---------------- | ----------------------------------------------------- |
+    | `NODE_ENV`       | `production`                                          |
+    | `PORT`           | `5000`                                                |
+    | `MONGODB_URI`    | _(your Atlas URI)_                                    |
+    | `JWT_SECRET`     | _(long random string — see generation command below)_ |
+    | `JWT_EXPIRES_IN` | `7d`                                                  |
+    | `CLIENT_ORIGIN`  | _(your Netlify URL — fill this in after step A3)_     |
+
+5. Click **Create Web Service**. Note the URL Render gives you (e.g. `https://tripcrew-api.onrender.com`).
+
+#### A3. Deploy the frontend on Netlify
+
+1. Go to [netlify.com](https://netlify.com) → sign up (free) → **Add new site → Import an existing project**.
+2. Connect GitHub, pick the same repo.
+3. Configure:
+
+    | Field                 | Value                          |
+    | --------------------- | ------------------------------ |
+    | **Base directory**    | `client`                       |
+    | **Build command**     | `npm install && npm run build` |
+    | **Publish directory** | `dist`                         |
+
+4. Under **Environment variables**, add:
+
+    | Key                 | Value                                   |
+    | ------------------- | --------------------------------------- |
+    | `VITE_API_BASE_URL` | `https://tripcrew-api.onrender.com/api` |
+
+5. Click **Deploy site**. Netlify gives you a URL like `https://tripcrew-abc123.netlify.app`.
+
+    > Netlify automatically serves `index.html` for unknown routes (SPA fallback), so React Router works without extra configuration.
+
+#### A4. Wire them together
+
+Go back to Render → your `tripcrew-api` service → **Environment** tab → update `CLIENT_ORIGIN` to your Netlify URL (e.g. `https://tripcrew-abc123.netlify.app`). Save — Render redeploys automatically.
+
+Share the Netlify URL with your friends. Done.
+
+---
+
+### Option B — Fly.io (backend) + Netlify (frontend)
+
+Fly.io's free tier gives you two shared-CPU VMs that **do not sleep**. The backend stays warm at all times. Requires Docker installed locally.
+
+#### B1. Install the Fly CLI
+
+```powershell
+# Windows — run in PowerShell
+iwr https://fly.io/install.ps1 -useb | iex
+fly auth signup   # or: fly auth login
+```
+
+#### B2. Create a Dockerfile for the server
+
+Create the file `server/Dockerfile` (at the repo root level so it can access `shared/`):
+
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Copy the shared package first (server depends on file:../shared)
+COPY shared/ ./shared/
+COPY server/package*.json ./server/
+RUN cd server && npm install
+COPY server/ ./server/
+RUN cd server && npm run build
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/server/dist ./dist
+COPY --from=builder /app/server/node_modules ./node_modules
+COPY --from=builder /app/server/package.json ./package.json
+ENV NODE_ENV=production
+EXPOSE 5000
+CMD ["node", "dist/server.js"]
+```
+
+#### B3. Launch and deploy to Fly.io
+
+Run from the **repo root**:
+
+```powershell
+cd "D:\Projects\TripCrew Planner"
+fly launch --name tripcrew-api --dockerfile server/Dockerfile --no-deploy
+```
+
+Fly creates `fly.toml`. Open it and confirm the internal port is `5000`:
+
+```toml
+[http_service]
+  internal_port = 5000
+  force_https   = true
+```
+
+Set secrets (these stay server-side, never in source control):
+
+```powershell
+fly secrets set `
+  NODE_ENV=production `
+  MONGODB_URI="mongodb+srv://tripcrew:..." `
+  JWT_SECRET="<your-random-secret>" `
+  JWT_EXPIRES_IN=7d `
+  CLIENT_ORIGIN="https://tripcrew-abc123.netlify.app"
+```
+
+Deploy:
+
+```powershell
+fly deploy --dockerfile server/Dockerfile
+```
+
+Fly prints your app URL: `https://tripcrew-api.fly.dev`.
+
+#### B4. Deploy the frontend on Netlify
+
+Follow **Option A steps A1 and A3**, setting `VITE_API_BASE_URL` to `https://tripcrew-api.fly.dev/api`.
+
+---
+
+### Option C — Raspberry Pi 5 (Full Self-Host)
+
+The Pi runs everything: Nginx (serves the React SPA + reverse-proxies the API), PM2 (keeps the Node process alive), and optionally MongoDB. A Cloudflare Tunnel gives your friends a stable public HTTPS URL without any port forwarding or router configuration.
+
+#### C1. Flash the Operating System
+
+On your Windows PC, download [Raspberry Pi Imager](https://www.raspberrypi.com/software/) and flash an SD card:
+
+- **OS**: Raspberry Pi OS Lite (64-bit) — no desktop needed
+- In **Advanced settings** (gear icon): enable SSH, set a hostname (e.g. `tripcrew`), set a username/password, configure your WiFi credentials.
+
+Insert the SD card into the Pi, power it on, then SSH in from your PC:
+
+```powershell
+ssh pi@tripcrew.local
+# or use the Pi's local IP: ssh pi@192.168.x.x
+```
+
+Update and install base tools:
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git curl nginx
+```
+
+#### C2. Install Node.js 20 via NVM
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+source ~/.bashrc
+nvm install 20
+nvm use 20
+node -v    # should print v20.x.x
+npm install -g pm2
+```
+
+#### C3. Database — choose one
+
+**Recommended: MongoDB Atlas (zero maintenance)** — use the Atlas URI from the pre-requisite step. Skip ahead to C4.
+
+**Alternative: Install MongoDB 7 locally on the Pi**
+
+```bash
+curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc \
+  | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+
+echo "deb [ arch=arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] \
+  https://repo.mongodb.org/apt/debian bookworm/mongodb-org/7.0 main" \
+  | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+sudo apt update && sudo apt install -y mongodb-org
+sudo systemctl enable --now mongod
+```
+
+Verify: `mongosh --eval "db.adminCommand('ping')"` → `{ ok: 1 }`.
+
+When using local MongoDB, set `MONGODB_URI=mongodb://127.0.0.1:27017/tripcrew` in `.env`.
+
+#### C4. Clone and build the project
+
+```bash
+cd ~
+git clone https://github.com/<you>/<repo>.git tripcrew
+cd tripcrew
+
+# Build the backend
+cd server
+npm install
+npm run build
+
+# Build the frontend (produces static files in client/dist/)
+cd ../client
+npm install
+npm run build
+```
+
+Create the server environment file:
+
+```bash
+nano ~/tripcrew/server/.env
+```
+
+```env
+NODE_ENV=production
+PORT=5000
+MONGODB_URI=<your Atlas URI or mongodb://127.0.0.1:27017/tripcrew>
+JWT_SECRET=<long random string — see generation command at end of this section>
+JWT_EXPIRES_IN=7d
+CLIENT_ORIGIN=https://<your-public-domain>   # fill in after C7
+```
+
+#### C5. Start the server with PM2
+
+```bash
+cd ~/tripcrew/server
+pm2 start dist/server.js --name tripcrew-api
+pm2 save        # persist process list across reboots
+pm2 startup     # copy and run the command it prints to register PM2 as a system service
+```
+
+Verify the API is running locally:
+
+```bash
+curl http://localhost:5000/api/health
+# → {"status":"ok","time":"..."}
+```
+
+#### C6. Configure Nginx
+
+Nginx serves the React SPA and reverse-proxies all `/api/` traffic to Express.
+
+```bash
+sudo nano /etc/nginx/sites-available/tripcrew
+```
+
+Paste the following (replace the username in `root` if you chose something other than `pi`):
 
 ```nginx
-location / {
-  root /var/www/tripcrew/dist;
-  try_files $uri $uri/ /index.html;
+server {
+    listen 80;
+    server_name _;    # matches any hostname — Cloudflare Tunnel handles the real domain
+
+    # Serve the React SPA
+    root /home/pi/tripcrew/client/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;   # SPA fallback — all routes return index.html
+    }
+
+    # Reverse-proxy API requests to Express
+    location /api/ {
+        proxy_pass         http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        keep-alive;
+    }
 }
 ```
+
+Enable the site and test:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/tripcrew /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default    # remove the default placeholder
+sudo nginx -t                                   # must say "test is successful"
+sudo systemctl reload nginx
+```
+
+Verify everything works locally end-to-end:
+
+```bash
+curl http://localhost/api/health
+# → {"status":"ok","time":"..."}
+```
+
+#### C7. Expose to the internet
+
+Choose one of the following methods. **Method 1 (Cloudflare Tunnel) is recommended** because it requires no router changes and gives your friends a stable HTTPS URL.
+
+---
+
+**Method 1 — Cloudflare Tunnel (recommended: no port forwarding, free HTTPS)**
+
+You need: a free [Cloudflare account](https://cloudflare.com) and a domain name pointed to Cloudflare's nameservers. If you don't already own a domain, a cheap `.com` from Porkbun or Namecheap costs ~$10/year; you then add it to Cloudflare for free DNS management.
+
+```bash
+# Install cloudflared on the Pi (ARM64)
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb \
+  -o cloudflared.deb
+sudo dpkg -i cloudflared.deb
+
+# Log in (run this on the Pi; it prints a URL — open it on your PC to authenticate)
+cloudflared tunnel login
+
+# Create a named tunnel
+cloudflared tunnel create tripcrew
+
+# Route your subdomain to the tunnel
+cloudflared tunnel route dns tripcrew tripcrew.yourdomain.com
+
+# Create the config file
+mkdir -p ~/.cloudflared
+nano ~/.cloudflared/config.yml
+```
+
+`~/.cloudflared/config.yml`:
+
+```yaml
+tunnel: tripcrew
+credentials-file: /home/pi/.cloudflared/<tunnel-id>.json
+
+ingress:
+    - hostname: tripcrew.yourdomain.com
+      service: http://localhost:80 # Nginx handles routing from here
+    - service: http_status:404
+```
+
+Install as a system service so it starts on boot:
+
+```bash
+sudo cloudflared service install
+sudo systemctl enable --now cloudflared
+```
+
+Update `CLIENT_ORIGIN` in `server/.env` to `https://tripcrew.yourdomain.com`, then restart the API:
+
+```bash
+pm2 restart tripcrew-api
+```
+
+Your friends access `https://tripcrew.yourdomain.com`. Cloudflare provides HTTPS automatically.
+
+---
+
+**Method 2 — Quick Tunnel (zero config, temporary URL — good for a quick test)**
+
+No account or domain required. The URL is random and changes every time you restart the tunnel.
+
+```bash
+cloudflared tunnel --url http://localhost:80
+```
+
+It prints a URL like `https://some-random-words.trycloudflare.com`. Share that in your group chat. When you restart the Pi or the command, you get a new URL.
+
+---
+
+**Method 3 — DuckDNS + Port Forwarding + Let's Encrypt (free, persistent URL, requires router access)**
+
+1. Register a free subdomain at [duckdns.org](https://www.duckdns.org) (e.g. `tripcrew.duckdns.org`). Copy your token.
+
+2. On the Pi, add a cron job to keep the DNS record pointing to your home IP:
+
+    ```bash
+    crontab -e
+    # Add this line:
+    */5 * * * * curl -s "https://www.duckdns.org/update?domains=tripcrew&token=<your-token>&ip=" > /dev/null
+    ```
+
+3. In your **router's admin panel**, forward **TCP ports 80 and 443** to the Pi's local IP address (usually `192.168.x.x`).
+
+4. Install certbot and get a free SSL certificate:
+
+    ```bash
+    sudo apt install -y certbot python3-certbot-nginx
+    sudo certbot --nginx -d tripcrew.duckdns.org
+    ```
+
+    Certbot edits your Nginx config to add HTTPS and redirects. Enable auto-renewal:
+
+    ```bash
+    sudo systemctl enable certbot.timer
+    ```
+
+Your friends access `https://tripcrew.duckdns.org`.
+
+---
+
+**Method 4 — Tailscale (free VPN, no port forwarding, but friends need the app)**
+
+No domain, no port forwarding — but every person who wants to access TripCrew must install the free Tailscale app on their device and be invited to your tailnet.
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+```
+
+Tailscale assigns the Pi a stable IP (e.g. `100.x.x.x`) and a hostname (`tripcrew.tail<xxxx>.ts.net`). Invite friends via the [Tailscale admin panel](https://login.tailscale.com/admin/). They then access `http://tripcrew.tail<xxxx>.ts.net` directly.
+
+---
+
+#### C8. Updating the app after code changes
+
+Whenever you push new code:
+
+```bash
+cd ~/tripcrew
+git pull origin main
+
+# Rebuild and restart the backend
+cd server && npm install && npm run build
+pm2 restart tripcrew-api
+
+# Rebuild the frontend (Nginx picks up new files immediately)
+cd ../client && npm install && npm run build
+```
+
+---
+
+### Option D — Raspberry Pi (backend) + Netlify (frontend) + Atlas (database)
+
+This hybrid keeps the always-on Pi handling the API while Netlify's global CDN serves the frontend with zero latency everywhere.
+
+1. Follow **Option C steps C1–C6**, but use a simplified Nginx config that only proxies the API (no frontend serving needed):
+
+    ```nginx
+    server {
+        listen 80;
+        server_name _;
+
+        location /api/ {
+            proxy_pass         http://127.0.0.1:5000;
+            proxy_http_version 1.1;
+            proxy_set_header   Host            $host;
+            proxy_set_header   X-Real-IP       $remote_addr;
+            proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+    }
+    ```
+
+2. Expose the Pi's port 80 using **Cloudflare Tunnel** (Method 1 in C7) pointing to `http://localhost:80`. Your API tunnel URL becomes something like `https://tripcrew-api.yourdomain.com`.
+
+3. Follow **Option A steps A1 and A3** to deploy the frontend to Netlify. Set:
+    - `VITE_API_BASE_URL` = `https://tripcrew-api.yourdomain.com/api`
+
+4. On the Pi, update `server/.env`:
+    - `CLIENT_ORIGIN` = your Netlify URL (e.g. `https://tripcrew-abc123.netlify.app`)
+
+5. Restart the API:
+
+    ```bash
+    pm2 restart tripcrew-api
+    ```
+
+Share your Netlify URL with friends. The frontend loads fast from Netlify's CDN; all API calls tunnel securely through Cloudflare to your Pi.
+
+---
+
+### Environment Variables Reference
+
+| Variable            | Location | Description                                                                                               |
+| ------------------- | -------- | --------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`          | server   | Set to `production` for all live deployments                                                              |
+| `PORT`              | server   | Port Express listens on (default `5000`)                                                                  |
+| `MONGODB_URI`       | server   | Full MongoDB Atlas connection string                                                                      |
+| `JWT_SECRET`        | server   | Long random string — changing it invalidates all active sessions                                          |
+| `JWT_EXPIRES_IN`    | server   | Token lifetime (e.g. `7d`, `30d`)                                                                         |
+| `CLIENT_ORIGIN`     | server   | Exact URL of the frontend — controls the CORS `Access-Control-Allow-Origin` header (no trailing slash)    |
+| `VITE_API_BASE_URL` | client   | Full URL of the API including `/api` suffix (e.g. `https://api.example.com/api`) — baked in at build time |
+
+Generate a cryptographically strong `JWT_SECRET`:
+
+```powershell
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+---
+
+### Pre-flight Checklist
+
+Run through this before sharing the link with your friends:
+
+- [ ] `MONGODB_URI` is set and the Atlas cluster allows connections from your server's IP (or `0.0.0.0/0`)
+- [ ] `JWT_SECRET` is a long, randomly generated string — not a placeholder
+- [ ] `CLIENT_ORIGIN` exactly matches the frontend URL (correct protocol `https://`, correct domain, no trailing slash)
+- [ ] `VITE_API_BASE_URL` is the production API URL, not `localhost`
+- [ ] The API health check responds: `curl https://<your-api-url>/api/health` → `{"status":"ok",...}`
+- [ ] The frontend loads in a browser and you can register, log in, and create a trip
 
 ---
 

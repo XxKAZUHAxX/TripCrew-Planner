@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
+    ArrowLeft,
     Calendar,
     Check,
     ClipboardList,
@@ -226,6 +227,13 @@ export default function TripDashboard() {
                     </Badge>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Link
+                        className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+                        to={`/trips`}
+                    >
+                        <ArrowLeft className="size-4" />
+                        Back
+                    </Link>
                     {!isCreator && (
                         <Button
                             variant="outline"
