@@ -399,12 +399,12 @@ Authorization: Bearer <jwt_token>
 
 ### Destinations — `/api/trips/:tripId/destinations`
 
-| Method | Path   | Auth | Member | Description                            |
-| ------ | ------ | ---- | ------ | -------------------------------------- |
-| POST   | `/`    | Yes  | Yes    | Propose a destination                  |
-| GET    | `/`    | Yes  | Yes    | List all destinations for the trip     |
+| Method | Path   | Auth | Member | Description                                         |
+| ------ | ------ | ---- | ------ | --------------------------------------------------- |
+| POST   | `/`    | Yes  | Yes    | Propose a destination                               |
+| GET    | `/`    | Yes  | Yes    | List all destinations for the trip                  |
 | PATCH  | `/:id` | Yes  | Yes    | Edit estimated cost (proposer or trip creator only) |
-| DELETE | `/:id` | Yes  | Yes    | Delete (proposer or trip creator only) |
+| DELETE | `/:id` | Yes  | Yes    | Delete (proposer or trip creator only)              |
 
 **Propose body:**
 
@@ -750,7 +750,7 @@ Badges are computed **on-the-fly** every time the dashboard loads. They are base
 | ------------------- | ------------------------------------------------------------------------- |
 | 👑 The Dictator     | Has proposed **more than 5** destinations for this trip.                  |
 | 👻 The Ghost        | Has cast **zero votes** AND the voting deadline is **within 24 hours**.   |
-|  The Overthinker  | Has changed their vote ranking **more than 3 times** (`changeCount > 3`). |
+| The Overthinker     | Has changed their vote ranking **more than 3 times** (`changeCount > 3`). |
 | 🎉 The Hype Machine | Was the **first person** to cast a vote for this trip.                    |
 
 A member can hold **multiple badges simultaneously**. Members **can see their own badges** (intentional — the comedy is self-aware).

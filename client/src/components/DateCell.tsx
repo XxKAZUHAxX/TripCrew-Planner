@@ -44,9 +44,7 @@ export default function DateCell({
                 type="button"
                 className={cn(
                     'flex aspect-square w-full touch-none select-none flex-col items-center justify-center rounded-md border text-xs transition',
-                    selected
-                        ? 'border-primary ring-2 ring-primary ring-offset-1'
-                        : 'border-border'
+                    selected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-border'
                 )}
                 style={{ backgroundColor: bg, color: count >= 3 ? '#fff' : undefined }}
                 onPointerDown={(e) => {

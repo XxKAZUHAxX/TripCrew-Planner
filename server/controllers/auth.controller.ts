@@ -82,8 +82,7 @@ export async function resetPassword(
         );
         // Normalized (trim + case-insensitive) name comparison.
         const namesMatch =
-            user != null &&
-            user.name.trim().toLowerCase() === String(name).trim().toLowerCase();
+            user != null && user.name.trim().toLowerCase() === String(name).trim().toLowerCase();
         if (!user || !namesMatch) {
             res.status(400).json({ message: generic });
             return;

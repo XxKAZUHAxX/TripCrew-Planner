@@ -8,6 +8,53 @@ function isValidCost(value: unknown): value is number | null {
     return value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0);
 }
 
+const MAX_LINKS = 10;
+const MAX_TAGS = 12;
+const MAX_TAG_LEN = 30;
+
+// Accepts only well-formed http(s) URLs so we never persist javascript:/data:
+// URIs that could later be rendered as clickable links (XSS defense).
+function sanitizeLinks(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    const out: string[] = [];
+    for (const raw of value) {
+        if (typeof raw !== 'string') continue;
+        const trimmed = raw.trim();
+        if (!trimmed) continue;
+        try {
+            const url = new URL(trimmed);
+            if (url.protocol === 'http:' || url.protocol === 'https:') out.push(url.toString());
+        } catch {
+            // Skip anything that isn't an absolute URL.
+        }
+        if (out.length >= MAX_LINKS) break;
+    }
+    return out;
+}
+
+function sanitizeTags(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const raw of value) {
+        if (typeof raw !== 'string') continue;
+        const tag = raw.trim().slice(0, MAX_TAG_LEN);
+        const key = tag.toLowerCase();
+        if (!tag || seen.has(key)) continue;
+        seen.add(key);
+        out.push(tag);
+        if (out.length >= MAX_TAGS) break;
+    }
+    return out;
+}
+
+// Re-fetches a destination with author references populated for API responses.
+async function populated(id: Types.ObjectId | string) {
+    return Destination.findById(id)
+        .populate('proposedBy', 'name email')
+        .populate('comments.userId', 'name email');
+}
+
 export async function proposeDestination(
     req: Request,
     res: Response,
@@ -24,7 +71,9 @@ export async function proposeDestination(
             return;
         }
         if (estimatedCost !== undefined && !isValidCost(estimatedCost)) {
-            res.status(400).json({ message: 'estimatedCost must be a non-negative number or null' });
+            res.status(400).json({
+                message: 'estimatedCost must be a non-negative number or null',
+            });
             return;
         }
         const destination = await Destination.create({
@@ -40,17 +89,24 @@ export async function proposeDestination(
     }
 }
 
-// Edit a destination's estimated cost at any time (Feature 7). Gated the same
-// way as deletion: only the proposer or the trip creator.
+// Edit a destination. Cost edits (Feature 7) stay gated to the proposer or the
+// trip creator; the collaborative details (notes/links/tags, Feature 4) may be
+// edited by any trip member so everyone can help make the case.
 export async function updateDestination(
     req: Request,
     res: Response,
     next: NextFunction
 ): Promise<void> {
     try {
-        const { estimatedCost } = req.body;
+        const { estimatedCost, notes, links, tags } = req.body;
         if (estimatedCost !== undefined && !isValidCost(estimatedCost)) {
-            res.status(400).json({ message: 'estimatedCost must be a non-negative number or null' });
+            res.status(400).json({
+                message: 'estimatedCost must be a non-negative number or null',
+            });
+            return;
+        }
+        if (notes !== undefined && typeof notes !== 'string') {
+            res.status(400).json({ message: 'notes must be a string' });
             return;
         }
         const destination = await Destination.findOne({
@@ -61,17 +117,81 @@ export async function updateDestination(
             res.status(404).json({ message: 'Destination not found' });
             return;
         }
-        const isProposer = destination.proposedBy.equals(req.user.id);
-        const isCreator = req.trip.isCreator(req.user.id);
-        if (!isProposer && !isCreator) {
-            res.status(403).json({ message: 'Only the proposer or trip creator can edit this' });
-            return;
-        }
         if (estimatedCost !== undefined) {
+            const isProposer = destination.proposedBy.equals(req.user.id);
+            const isCreator = req.trip.isCreator(req.user.id);
+            if (!isProposer && !isCreator) {
+                res.status(403).json({
+                    message: 'Only the proposer or trip creator can edit the cost',
+                });
+                return;
+            }
             destination.estimatedCost = estimatedCost;
         }
+        if (notes !== undefined) destination.notes = notes;
+        if (links !== undefined) destination.links = sanitizeLinks(links);
+        if (tags !== undefined) destination.tags = sanitizeTags(tags);
         await destination.save();
-        res.json({ destination });
+        res.json({ destination: await populated(destination._id) });
+    } catch (err) {
+        next(err);
+    }
+}
+
+// Any trip member may add a comment (Feature 4).
+export async function addComment(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const { text } = req.body;
+        if (!text || typeof text !== 'string' || !text.trim()) {
+            res.status(400).json({ message: 'Comment text is required' });
+            return;
+        }
+        const destination = await Destination.findOne({
+            _id: req.params.id,
+            tripId: req.trip._id,
+        });
+        if (!destination) {
+            res.status(404).json({ message: 'Destination not found' });
+            return;
+        }
+        destination.comments.push({
+            userId: new Types.ObjectId(req.user.id),
+            text: text.trim().slice(0, 1000),
+        });
+        await destination.save();
+        res.status(201).json({ destination: await populated(destination._id) });
+    } catch (err) {
+        next(err);
+    }
+}
+
+// The comment author or the trip creator may delete a comment (Feature 4).
+export async function deleteComment(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const destination = await Destination.findOne({
+            _id: req.params.id,
+            tripId: req.trip._id,
+        });
+        if (!destination) {
+            res.status(404).json({ message: 'Destination not found' });
+            return;
+        }
+        const comment = destination.comments.id(req.params.commentId!);
+        if (!comment) {
+            res.status(404).json({ message: 'Comment not found' });
+            return;
+        }
+        const isAuthor = comment.userId.equals(req.user.id);
+        const isCreator = req.trip.isCreator(req.user.id);
+        if (!isAuthor && !isCreator) {
+            res.status(403).json({
+                message: 'Only the comment author or trip creator can delete it',
+            });
+            return;
+        }
+        comment.deleteOne();
+        await destination.save();
+        res.json({ destination: await populated(destination._id) });
     } catch (err) {
         next(err);
     }
@@ -85,6 +205,7 @@ export async function listDestinations(
     try {
         const destinations = await Destination.find({ tripId: req.trip._id })
             .populate('proposedBy', 'name email')
+            .populate('comments.userId', 'name email')
             .sort({ createdAt: 1 });
         res.json({ destinations });
     } catch (err) {

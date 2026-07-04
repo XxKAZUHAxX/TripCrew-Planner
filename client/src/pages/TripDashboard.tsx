@@ -29,7 +29,13 @@ import {
     leaveTrip,
     deleteTrip,
 } from '@/api/trips.api';
-import { proposeDestination, deleteDestination, updateDestination } from '@/api/destinations.api';
+import {
+    proposeDestination,
+    deleteDestination,
+    updateDestination,
+    addComment,
+    deleteComment,
+} from '@/api/destinations.api';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/errors';
 import { refId } from '@/utils/refs';
@@ -137,6 +143,38 @@ export default function TripDashboard() {
             toast.success('Estimated cost updated.');
         } catch (err) {
             toast.error(getErrorMessage(err, 'Failed to update cost'));
+        }
+    }
+
+    async function handleUpdateDetails(
+        id: string,
+        payload: { notes?: string; links?: string[]; tags?: string[] }
+    ) {
+        try {
+            await updateDestination(tripId, id, payload);
+            await load();
+            toast.success('Details updated.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to update details'));
+        }
+    }
+
+    async function handleAddComment(id: string, text: string) {
+        try {
+            await addComment(tripId, id, text);
+            await load();
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to add comment'));
+        }
+    }
+
+    async function handleDeleteComment(id: string, commentId: string) {
+        try {
+            await deleteComment(tripId, id, commentId);
+            await load();
+            toast.success('Comment deleted.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to delete comment'));
         }
     }
 
@@ -401,6 +439,9 @@ export default function TripDashboard() {
                         onPropose={handlePropose}
                         onDelete={handleDelete}
                         onUpdateCost={handleUpdateCost}
+                        onUpdateDetails={handleUpdateDetails}
+                        onAddComment={handleAddComment}
+                        onDeleteComment={handleDeleteComment}
                     />
                 </div>
 

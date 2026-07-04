@@ -18,6 +18,12 @@ interface DestinationListProps {
     onPropose: (payload: ProposeDestinationRequest) => void | Promise<void>;
     onDelete: (id: string) => void | Promise<void>;
     onUpdateCost: (id: string, estimatedCost: number | null) => void | Promise<void>;
+    onUpdateDetails: (
+        id: string,
+        payload: { notes?: string; links?: string[]; tags?: string[] }
+    ) => void | Promise<void>;
+    onAddComment: (id: string, text: string) => void | Promise<void>;
+    onDeleteComment: (id: string, commentId: string) => void | Promise<void>;
 }
 
 export default function DestinationList({
@@ -28,6 +34,9 @@ export default function DestinationList({
     onPropose,
     onDelete,
     onUpdateCost,
+    onUpdateDetails,
+    onAddComment,
+    onDeleteComment,
 }: DestinationListProps) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -118,10 +127,15 @@ export default function DestinationList({
                             <DestinationCard
                                 key={d._id}
                                 destination={d}
+                                currentUserId={currentUserId}
+                                creatorId={creatorId}
                                 canDelete={canManage}
                                 canEdit={canManage}
                                 onDelete={onDelete}
                                 onUpdateCost={onUpdateCost}
+                                onUpdateDetails={onUpdateDetails}
+                                onAddComment={onAddComment}
+                                onDeleteComment={onDeleteComment}
                             />
                         );
                     })}

@@ -126,9 +126,17 @@ export interface ProposeDestinationRequest {
     estimatedCost?: number | null;
 }
 
-/** Edit a destination's mutable fields (Feature 7). */
+/** Edit a destination's mutable fields (Features 7 & 4). */
 export interface UpdateDestinationRequest {
     estimatedCost?: number | null;
+    notes?: string;
+    links?: string[];
+    tags?: string[];
+}
+
+/** Add a comment to a destination (Feature 4). */
+export interface AddCommentRequest {
+    text: string;
 }
 
 export interface DestinationResponse {

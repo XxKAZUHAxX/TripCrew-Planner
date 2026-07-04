@@ -1,7 +1,15 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Users, CalendarClock, UserX } from 'lucide-react';
+import {
+    ArrowLeft,
+    ChevronLeft,
+    ChevronRight,
+    ChevronDown,
+    Users,
+    CalendarClock,
+    UserX,
+} from 'lucide-react';
 import type {
     AvailabilityMember,
     AvailabilitySummaryEntry,
@@ -263,8 +271,8 @@ export default function AvailabilityPage() {
                 </Alert>
             ) : (
                 <p className="mb-4 text-sm text-muted-foreground">
-                    Tap or drag to mark your available dates. Colors show group overlap. Changes save
-                    automatically when you finish.
+                    Tap or drag to mark your available dates. Colors show group overlap. Changes
+                    save automatically when you finish.
                     {saving && <span className="ml-2 text-foreground">Saving…</span>}
                 </p>
             )}

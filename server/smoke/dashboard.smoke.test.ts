@@ -128,9 +128,6 @@ describe('dashboard', () => {
             'dashboard reports opted-out member'
         );
         const quinnBadges = dash.data.badges[quitter.id] || [];
-        assert(
-            !quinnBadges.includes('The Ghost'),
-            'opted-out member does not earn The Ghost'
-        );
+        assert(!quinnBadges.includes('The Ghost'), 'opted-out member does not earn The Ghost');
     });
 });

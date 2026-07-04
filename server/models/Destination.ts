@@ -1,5 +1,14 @@
 import { Schema, model, type Types, type HydratedDocument } from 'mongoose';
 
+// A member's comment on a destination (embedded subdoc, Feature 4).
+export interface IDestinationComment {
+    _id: Types.ObjectId;
+    userId: Types.ObjectId;
+    text: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 export interface IDestination {
     tripId: Types.ObjectId;
     name: string;
@@ -7,9 +16,22 @@ export interface IDestination {
     proposedBy: Types.ObjectId;
     // Freeform per-person estimate in ₱; null until someone estimates it.
     estimatedCost: number | null;
+    // Collaborative "make the case" details (Feature 4).
+    notes: string;
+    links: string[];
+    tags: string[];
+    comments: Types.DocumentArray<IDestinationComment>;
     createdAt: Date;
     updatedAt: Date;
 }
+
+const commentSchema = new Schema<IDestinationComment>(
+    {
+        userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        text: { type: String, required: true, trim: true },
+    },
+    { timestamps: true }
+);
 
 const destinationSchema = new Schema<IDestination>(
     {
@@ -18,6 +40,10 @@ const destinationSchema = new Schema<IDestination>(
         description: { type: String, default: '' },
         proposedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
         estimatedCost: { type: Number, default: null, min: 0 },
+        notes: { type: String, default: '' },
+        links: { type: [String], default: [] },
+        tags: { type: [String], default: [] },
+        comments: { type: [commentSchema], default: [] },
     },
     { timestamps: true }
 );

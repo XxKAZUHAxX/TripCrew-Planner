@@ -6,6 +6,8 @@ import {
     listDestinations,
     deleteDestination,
     updateDestination,
+    addComment,
+    deleteComment,
 } from '../controllers/destinations.controller.js';
 
 // Mounted at /api/trips/:tripId/destinations
@@ -15,5 +17,7 @@ router.post('/', requireAuth, requireMembership, proposeDestination);
 router.get('/', requireAuth, requireMembership, listDestinations);
 router.patch('/:id', requireAuth, requireMembership, updateDestination);
 router.delete('/:id', requireAuth, requireMembership, deleteDestination);
+router.post('/:id/comments', requireAuth, requireMembership, addComment);
+router.delete('/:id/comments/:commentId', requireAuth, requireMembership, deleteComment);
 
 export default router;

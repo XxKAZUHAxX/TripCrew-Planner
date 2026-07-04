@@ -128,9 +128,7 @@ export async function updatePlaybookEditors(
         const trip = req.trip;
         const memberSet = new Set(trip.members.map((m) => m.toString()));
         const creatorId = trip.creator.toString();
-        const next = [...new Set(editorIds)].filter(
-            (id) => memberSet.has(id) && id !== creatorId
-        );
+        const next = [...new Set(editorIds)].filter((id) => memberSet.has(id) && id !== creatorId);
         trip.playbookEditors = next.map((id) => new Types.ObjectId(id));
         await trip.save();
         res.json({ trip });

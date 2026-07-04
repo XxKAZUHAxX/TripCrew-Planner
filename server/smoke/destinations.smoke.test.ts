@@ -74,4 +74,76 @@ describe('destinations', () => {
         });
         assert(forbiddenDel.status === 403, 'non-proposer/non-creator cannot delete');
     });
+
+    it('lets any member add details and comments, gates comment deletion (F4)', async () => {
+        const { api } = h;
+
+        async function makeUser(
+            name: string,
+            email: string
+        ): Promise<{ token: string; id: string }> {
+            const r = await api('POST', '/api/auth/register', {
+                body: { name, email, password: 'pw12345' },
+            });
+            return { token: r.data.token, id: r.data.user.id };
+        }
+
+        const host = await makeUser('Host', 'host-f4@example.com');
+        const member = await makeUser('Member', 'member-f4@example.com');
+        const trip = (
+            await api('POST', '/api/trips', { token: host.token, body: { title: 'F4 Trip' } })
+        ).data.trip;
+        await api('POST', `/api/trips/join/${trip.inviteCode}`, { token: member.token });
+        const base = `/api/trips/${trip._id}/destinations`;
+
+        const dest = (
+            await api('POST', base, { token: host.token, body: { name: 'Cebu' } })
+        ).data.destination;
+        const dBase = `${base}/${dest._id}`;
+
+        // A non-proposer member can add notes/links/tags; bad links are dropped.
+        const details = await api('PATCH', dBase, {
+            token: member.token,
+            body: {
+                notes: '# Why Cebu\nGreat beaches',
+                links: ['https://cebu.example.com', 'javascript:alert(1)', 'not a url'],
+                tags: ['Beach', 'beach', ' Foodie '],
+            },
+        });
+        assert(details.status === 200, 'any member can edit details');
+        assert(
+            details.data.destination.links.length === 1 &&
+                details.data.destination.links[0].startsWith('https://'),
+            'only safe http(s) links are stored'
+        );
+        assert(details.data.destination.tags.length === 2, 'tags trimmed + de-duplicated');
+        assert(details.data.destination.notes.includes('Why Cebu'), 'notes stored');
+
+        // Empty comment rejected.
+        const empty = await api('POST', `${dBase}/comments`, {
+            token: member.token,
+            body: { text: '   ' },
+        });
+        assert(empty.status === 400, 'empty comment rejected');
+
+        // Member adds a comment; author is populated.
+        const comment = await api('POST', `${dBase}/comments`, {
+            token: member.token,
+            body: { text: 'I vote for this!' },
+        });
+        assert(comment.status === 201, 'member adds a comment');
+        const c = comment.data.destination.comments[0];
+        assert(c.text === 'I vote for this!' && c.userId.name === 'Member', 'comment stored + author');
+
+        // Host (creator) may delete anyone's comment; a non-author member may not.
+        const other = await makeUser('Other', 'other-f4@example.com');
+        await api('POST', `/api/trips/join/${trip.inviteCode}`, { token: other.token });
+        const forbidden = await api('DELETE', `${dBase}/comments/${c._id}`, { token: other.token });
+        assert(forbidden.status === 403, 'non-author/non-creator cannot delete comment');
+        const removed = await api('DELETE', `${dBase}/comments/${c._id}`, { token: host.token });
+        assert(
+            removed.status === 200 && removed.data.destination.comments.length === 0,
+            'creator deletes comment'
+        );
+    });
 });

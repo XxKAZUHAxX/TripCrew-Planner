@@ -19,8 +19,7 @@ export type TripStatus = 'voting' | 'decided' | 'archived';
  */
 export type AvailabilityStatus = 'pending' | 'submitted' | 'opted_out';
 
-export type ArchetypeName =
-    'The Dictator' | 'The Ghost' | 'The Overthinker' | 'The Hype Machine';
+export type ArchetypeName = 'The Dictator' | 'The Ghost' | 'The Overthinker' | 'The Hype Machine';
 
 /** The non-sensitive user shape returned by auth endpoints (`toSafeJSON`). */
 export interface User {
@@ -46,6 +45,20 @@ export interface Destination {
     proposedBy: string | UserRef;
     /** Freeform per-person estimate in ₱, or null when not yet estimated. */
     estimatedCost: number | null;
+    /** Collaborative "make the case" details (Feature 4). */
+    notes: string;
+    links: string[];
+    tags: string[];
+    comments: DestinationComment[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+/** A member's comment on a destination. */
+export interface DestinationComment {
+    _id: string;
+    userId: string | UserRef;
+    text: string;
     createdAt: string;
     updatedAt: string;
 }
