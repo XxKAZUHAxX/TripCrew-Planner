@@ -3,6 +3,7 @@ import type {
     LoginRequest,
     MeResponse,
     RegisterRequest,
+    ResetPasswordRequest,
     User,
 } from '@tripcrew/shared';
 import api from './axiosInstance';
@@ -14,6 +15,11 @@ export async function register(payload: RegisterRequest): Promise<AuthResponse> 
 
 export async function login(payload: LoginRequest): Promise<AuthResponse> {
     const { data } = await api.post<AuthResponse>('/auth/login', payload);
+    return data;
+}
+
+export async function resetPassword(payload: ResetPasswordRequest): Promise<AuthResponse> {
+    const { data } = await api.post<AuthResponse>('/auth/reset-password', payload);
     return data;
 }
 

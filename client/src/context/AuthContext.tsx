@@ -1,5 +1,11 @@
 import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import type { AuthResponse, LoginRequest, RegisterRequest, User } from '@tripcrew/shared';
+import type {
+    AuthResponse,
+    LoginRequest,
+    RegisterRequest,
+    ResetPasswordRequest,
+    User,
+} from '@tripcrew/shared';
 import * as authApi from '../api/auth.api';
 
 export interface AuthContextValue {
@@ -8,6 +14,7 @@ export interface AuthContextValue {
     loading: boolean;
     login(credentials: LoginRequest): Promise<User>;
     register(payload: RegisterRequest): Promise<User>;
+    resetPassword(payload: ResetPasswordRequest): Promise<User>;
     logout(): void;
 }
 
@@ -67,6 +74,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         [persist]
     );
 
+    const resetPassword = useCallback(
+        async (payload: ResetPasswordRequest): Promise<User> => {
+            const data = await authApi.resetPassword(payload);
+            persist(data);
+            return data.user;
+        },
+        [persist]
+    );
+
     const logout = useCallback(() => {
         localStorage.removeItem(TOKEN_KEY);
         setToken(null);
@@ -74,7 +90,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     return (
-        <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+        <AuthContext.Provider
+            value={{ user, token, loading, login, register, resetPassword, logout }}
+        >
             {children}
         </AuthContext.Provider>
     );

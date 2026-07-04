@@ -60,3 +60,39 @@ export async function me(req: Request, res: Response, next: NextFunction): Promi
         next(err);
     }
 }
+
+// Passwordless recovery (Feature 3): no email is sent. The caller must supply
+// a name + email that both match an existing user. On any mismatch we return a
+// single generic error so an attacker can't tell which emails are registered.
+// This is a deliberately weak identity check, so the route is rate-limited.
+export async function resetPassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try {
+        const { name, email, password } = req.body;
+        if (!name || !email || !password) {
+            res.status(400).json({ message: 'name, email and password are required' });
+            return;
+        }
+        const generic = 'Name and email do not match our records.';
+        const user = await User.findOne({ email: String(email).toLowerCase() }).select(
+            '+passwordHash'
+        );
+        // Normalized (trim + case-insensitive) name comparison.
+        const namesMatch =
+            user != null &&
+            user.name.trim().toLowerCase() === String(name).trim().toLowerCase();
+        if (!user || !namesMatch) {
+            res.status(400).json({ message: generic });
+            return;
+        }
+        await user.setPassword(password);
+        await user.save();
+        const token = issueToken(user);
+        res.json({ token, user: user.toSafeJSON() });
+    } catch (err) {
+        next(err);
+    }
+}

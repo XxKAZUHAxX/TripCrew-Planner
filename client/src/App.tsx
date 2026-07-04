@@ -6,6 +6,7 @@ import NavBar from './components/NavBar';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
 import TripsList from './pages/TripsList';
 import TripDashboard from './pages/TripDashboard';
 import Join from './pages/Join';
@@ -25,6 +26,7 @@ export default function App() {
                     <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route
                         path="/trips"
                         element={
