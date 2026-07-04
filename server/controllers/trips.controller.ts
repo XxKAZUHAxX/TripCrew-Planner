@@ -6,6 +6,7 @@ import Vote from '../models/Vote.js';
 import Availability from '../models/Availability.js';
 import { evaluateDeadlock } from '../utils/deadlock.js';
 import { rankByScore } from '../utils/borda.js';
+import { computeParticipation } from '../utils/participation.js';
 
 // The availability deadline may never precede the voting deadline: dates are
 // only meaningful once a destination race is closing. Returns an error message
@@ -217,12 +218,19 @@ export async function concludeVoting(
 ): Promise<void> {
     try {
         const trip = req.trip;
-        const [votes, destinations] = await Promise.all([
+        const [votes, destinations, availabilities] = await Promise.all([
             Vote.find({ tripId: trip._id }),
             Destination.find({ tripId: trip._id }),
+            Availability.find({ tripId: trip._id }).select('userId status'),
         ]);
+        const { effectiveMemberCount } = computeParticipation({
+            memberIds: trip.members.map((m) => String(m)),
+            availabilities,
+            availabilityDeadline: trip.availabilityDeadline,
+        });
         const deadlock = evaluateDeadlock(votes, destinations, {
             memberCount: trip.members.length,
+            effectiveMemberCount,
             votingDeadline: trip.votingDeadline,
         });
         const deadlockStatus = {

@@ -7,6 +7,7 @@
 import type {
     ArchetypeDefinitions,
     Availability,
+    AvailabilityStatus,
     BadgeMap,
     BudgetTier,
     ChecklistItem,
@@ -154,6 +155,8 @@ export interface DashboardResponse {
     voterCount: number;
     /** Ids of members who have submitted a vote. */
     votedMemberIds: string[];
+    /** Ids of members who have opted out of this trip's scheduling (Feature 1). */
+    optedOutMemberIds: string[];
 }
 
 // --- Availability: /api/trips/:tripId/availability ---------------------------
@@ -167,8 +170,14 @@ export interface SaveAvailabilityResponse {
     availability: Availability;
 }
 
+/** Result of opting in/out of a trip's scheduling (Feature 1). */
+export interface OptOutResponse {
+    availability: Availability;
+}
+
 export interface MyAvailabilityResponse {
     dates: string[];
+    status: AvailabilityStatus;
 }
 
 export type HeatmapResponse = Heatmap;

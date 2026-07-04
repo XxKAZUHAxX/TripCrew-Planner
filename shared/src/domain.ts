@@ -11,6 +11,14 @@
 
 export type TripStatus = 'voting' | 'decided' | 'archived';
 
+/**
+ * A member's availability response state:
+ *  - `pending`   — has not responded yet
+ *  - `submitted` — has marked their available dates
+ *  - `opted_out` — has bowed out of the trip's scheduling entirely
+ */
+export type AvailabilityStatus = 'pending' | 'submitted' | 'opted_out';
+
 export type BudgetTier = 'low' | 'medium' | 'high';
 
 export type ArchetypeName =
@@ -87,6 +95,7 @@ export interface Availability {
     tripId: string;
     userId: string;
     dates: string[];
+    status: AvailabilityStatus;
     createdAt: string;
     updatedAt: string;
 }
