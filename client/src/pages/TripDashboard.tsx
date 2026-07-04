@@ -29,7 +29,7 @@ import {
     leaveTrip,
     deleteTrip,
 } from '@/api/trips.api';
-import { proposeDestination, deleteDestination } from '@/api/destinations.api';
+import { proposeDestination, deleteDestination, updateDestination } from '@/api/destinations.api';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/errors';
 import { refId } from '@/utils/refs';
@@ -127,6 +127,16 @@ export default function TripDashboard() {
             toast.success('Destination removed.');
         } catch (err) {
             toast.error(getErrorMessage(err, 'Failed to remove destination'));
+        }
+    }
+
+    async function handleUpdateCost(id: string, estimatedCost: number | null) {
+        try {
+            await updateDestination(tripId, id, { estimatedCost });
+            await load();
+            toast.success('Estimated cost updated.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to update cost'));
         }
     }
 
@@ -390,6 +400,7 @@ export default function TripDashboard() {
                         status={trip.status}
                         onPropose={handlePropose}
                         onDelete={handleDelete}
+                        onUpdateCost={handleUpdateCost}
                     />
                 </div>
 

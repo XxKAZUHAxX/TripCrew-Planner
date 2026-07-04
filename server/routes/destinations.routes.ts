@@ -5,6 +5,7 @@ import {
     proposeDestination,
     listDestinations,
     deleteDestination,
+    updateDestination,
 } from '../controllers/destinations.controller.js';
 
 // Mounted at /api/trips/:tripId/destinations
@@ -12,6 +13,7 @@ const router = Router({ mergeParams: true });
 
 router.post('/', requireAuth, requireMembership, proposeDestination);
 router.get('/', requireAuth, requireMembership, listDestinations);
+router.patch('/:id', requireAuth, requireMembership, updateDestination);
 router.delete('/:id', requireAuth, requireMembership, deleteDestination);
 
 export default router;

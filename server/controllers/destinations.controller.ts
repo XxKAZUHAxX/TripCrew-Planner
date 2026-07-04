@@ -1,6 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
-import Destination, { BUDGET_TIERS } from '../models/Destination.js';
+import Destination from '../models/Destination.js';
+
+// Validates a freeform estimated cost: null clears it, otherwise a finite
+// non-negative number. Returns true when the value is acceptable.
+function isValidCost(value: unknown): value is number | null {
+    return value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0);
+}
 
 export async function proposeDestination(
     req: Request,
@@ -8,7 +14,7 @@ export async function proposeDestination(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { name, description, budgetTier } = req.body;
+        const { name, description, estimatedCost } = req.body;
         if (!name) {
             res.status(400).json({ message: 'name is required' });
             return;
@@ -17,20 +23,55 @@ export async function proposeDestination(
             res.status(403).json({ message: 'Destination proposals are closed for this trip.' });
             return;
         }
-        if (budgetTier && !BUDGET_TIERS.includes(budgetTier)) {
-            res.status(400).json({
-                message: `budgetTier must be one of ${BUDGET_TIERS.join(', ')}`,
-            });
+        if (estimatedCost !== undefined && !isValidCost(estimatedCost)) {
+            res.status(400).json({ message: 'estimatedCost must be a non-negative number or null' });
             return;
         }
         const destination = await Destination.create({
             tripId: req.trip._id,
             name,
             description: description || '',
-            budgetTier: budgetTier || 'medium',
+            estimatedCost: estimatedCost === undefined ? null : estimatedCost,
             proposedBy: new Types.ObjectId(req.user.id),
         });
         res.status(201).json({ destination });
+    } catch (err) {
+        next(err);
+    }
+}
+
+// Edit a destination's estimated cost at any time (Feature 7). Gated the same
+// way as deletion: only the proposer or the trip creator.
+export async function updateDestination(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try {
+        const { estimatedCost } = req.body;
+        if (estimatedCost !== undefined && !isValidCost(estimatedCost)) {
+            res.status(400).json({ message: 'estimatedCost must be a non-negative number or null' });
+            return;
+        }
+        const destination = await Destination.findOne({
+            _id: req.params.id,
+            tripId: req.trip._id,
+        });
+        if (!destination) {
+            res.status(404).json({ message: 'Destination not found' });
+            return;
+        }
+        const isProposer = destination.proposedBy.equals(req.user.id);
+        const isCreator = req.trip.isCreator(req.user.id);
+        if (!isProposer && !isCreator) {
+            res.status(403).json({ message: 'Only the proposer or trip creator can edit this' });
+            return;
+        }
+        if (estimatedCost !== undefined) {
+            destination.estimatedCost = estimatedCost;
+        }
+        await destination.save();
+        res.json({ destination });
     } catch (err) {
         next(err);
     }

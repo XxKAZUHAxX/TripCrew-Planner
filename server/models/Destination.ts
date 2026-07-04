@@ -1,15 +1,12 @@
 import { Schema, model, type Types, type HydratedDocument } from 'mongoose';
-import type { BudgetTier } from '@tripcrew/shared';
-
-export type { BudgetTier };
-export const BUDGET_TIERS: readonly BudgetTier[] = ['low', 'medium', 'high'];
 
 export interface IDestination {
     tripId: Types.ObjectId;
     name: string;
     description: string;
     proposedBy: Types.ObjectId;
-    budgetTier: BudgetTier;
+    // Freeform per-person estimate in ₱; null until someone estimates it.
+    estimatedCost: number | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -20,7 +17,7 @@ const destinationSchema = new Schema<IDestination>(
         name: { type: String, required: true, trim: true },
         description: { type: String, default: '' },
         proposedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-        budgetTier: { type: String, enum: BUDGET_TIERS, required: true, default: 'medium' },
+        estimatedCost: { type: Number, default: null, min: 0 },
     },
     { timestamps: true }
 );

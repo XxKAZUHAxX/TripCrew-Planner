@@ -1,27 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { Plus } from 'lucide-react';
-import type {
-    BudgetTier,
-    Destination,
-    ProposeDestinationRequest,
-    TripStatus,
-} from '@tripcrew/shared';
+import type { Destination, ProposeDestinationRequest, TripStatus } from '@tripcrew/shared';
 import { refId } from '@/utils/refs';
 import { cn } from '@/lib/utils';
-import { budgetOptionLabel } from '@/utils/budget';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InfoTooltip } from '@/components/ui/tooltip';
 import DestinationCard from './DestinationCard';
-
-const TIERS: BudgetTier[] = ['low', 'medium', 'high'];
-
-const selectClass = cn(
-    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
-    'disabled:cursor-not-allowed disabled:opacity-50'
-);
 
 interface DestinationListProps {
     destinations: Destination[];
@@ -31,6 +17,7 @@ interface DestinationListProps {
     status?: TripStatus;
     onPropose: (payload: ProposeDestinationRequest) => void | Promise<void>;
     onDelete: (id: string) => void | Promise<void>;
+    onUpdateCost: (id: string, estimatedCost: number | null) => void | Promise<void>;
 }
 
 export default function DestinationList({
@@ -40,10 +27,11 @@ export default function DestinationList({
     status = 'voting',
     onPropose,
     onDelete,
+    onUpdateCost,
 }: DestinationListProps) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [budgetTier, setBudgetTier] = useState<BudgetTier>('medium');
+    const [cost, setCost] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
     const proposalsOpen = status === 'voting';
@@ -53,10 +41,12 @@ export default function DestinationList({
         if (!proposalsOpen) return;
         setSubmitting(true);
         try {
-            await onPropose({ name, description, budgetTier });
+            const trimmed = cost.trim();
+            const estimatedCost = trimmed === '' ? null : Number(trimmed);
+            await onPropose({ name, description, estimatedCost });
             setName('');
             setDescription('');
-            setBudgetTier('medium');
+            setCost('');
         } finally {
             setSubmitting(false);
         }
@@ -89,20 +79,18 @@ export default function DestinationList({
                             />
                             <div className="space-y-1">
                                 <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                                    Budget
-                                    <InfoTooltip content="Estimated cost per person for the whole trip." />
+                                    Estimated cost (₱)
+                                    <InfoTooltip content="Rough per-person estimate for the whole trip. Optional and editable later." />
                                 </span>
-                                <select
-                                    className={selectClass}
-                                    value={budgetTier}
-                                    onChange={(e) => setBudgetTier(e.target.value as BudgetTier)}
-                                >
-                                    {TIERS.map((t) => (
-                                        <option key={t} value={t}>
-                                            {budgetOptionLabel(t)}
-                                        </option>
-                                    ))}
-                                </select>
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    step="any"
+                                    inputMode="numeric"
+                                    placeholder="e.g. 5000 (optional)"
+                                    value={cost}
+                                    onChange={(e) => setCost(e.target.value)}
+                                />
                             </div>
                             <Button
                                 type="submit"
@@ -124,14 +112,16 @@ export default function DestinationList({
                 <div className="space-y-2">
                     {destinations.map((d) => {
                         const proposerId = refId(d.proposedBy);
-                        const canDelete =
+                        const canManage =
                             proposerId === currentUserId || creatorId === currentUserId;
                         return (
                             <DestinationCard
                                 key={d._id}
                                 destination={d}
-                                canDelete={canDelete}
+                                canDelete={canManage}
+                                canEdit={canManage}
                                 onDelete={onDelete}
+                                onUpdateCost={onUpdateCost}
                             />
                         );
                     })}

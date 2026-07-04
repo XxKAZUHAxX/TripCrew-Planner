@@ -149,7 +149,7 @@ tripcrew/
 │           ├── borda.ts        Client-side Borda point helper
 │           ├── errors.ts       getErrorMessage (typed Axios errors)
 │           ├── refs.ts         refId (populated-vs-id duality)
-│           ├── budget.ts       Budget tier labels and metadata
+│           ├── cost.ts         Estimated-cost currency formatter
 │           ├── deadline.ts     Deadline formatting and countdown helpers
 │           └── tripStatus.ts   Trip status display labels
 │
@@ -403,15 +403,16 @@ Authorization: Bearer <jwt_token>
 | ------ | ------ | ---- | ------ | -------------------------------------- |
 | POST   | `/`    | Yes  | Yes    | Propose a destination                  |
 | GET    | `/`    | Yes  | Yes    | List all destinations for the trip     |
+| PATCH  | `/:id` | Yes  | Yes    | Edit estimated cost (proposer or trip creator only) |
 | DELETE | `/:id` | Yes  | Yes    | Delete (proposer or trip creator only) |
 
 **Propose body:**
 
 ```json
-{ "name": "Tokyo", "description": "Sushi heaven", "budgetTier": "high" }
+{ "name": "Tokyo", "description": "Sushi heaven", "estimatedCost": 8000 }
 ```
 
-`budgetTier` must be one of: `"low"`, `"medium"`, `"high"`.
+`estimatedCost` is an optional per-person estimate in ₱ — a non-negative number, or `null` when there's no estimate yet. It stays editable after creation via `PATCH /:id`.
 
 ---
 
@@ -530,7 +531,7 @@ Entries are sorted descending by member count. Dates with no members are omitted
 ```json
 {
     "scores": [{ "destId": "...", "name": "Tokyo", "score": 10 }],
-    "badges": { "<userId>": ["The Ghost", "The Accountant"] },
+    "badges": { "<userId>": ["The Ghost", "The Hype Machine"] },
     "definitions": {
         "The Ghost": "Has cast zero votes with the deadline looming (<24h)."
     },
@@ -668,7 +669,7 @@ The host can click **Conclude voting now** on the dashboard at any time to end v
 2. Use the **Propose a destination** form:
     - **Name** (required)
     - **Description** (optional)
-    - **Budget tier**: `low`, `medium`, or `high`
+    - **Estimated cost**: an optional per-person ₱ amount, editable anytime
 3. Click **Add**. The destination appears in the list immediately.
 
 **Deleting a destination:**
@@ -730,7 +731,7 @@ It shows:
 - **Voting deadline badge** — displays the deadline date; switches to a live countdown when fewer than 48 hours remain, and shows "Deadline has passed" once expired.
 - **Voted indicator** — a vote icon next to each member who has submitted their ranking, plus a "X of Y members have voted" tally beneath the scoreboard.
 - **Members list** — each member with their current archetype badges.
-- **Destinations** — all proposals with budget tier labels; the proposal form is disabled once voting concludes.
+- **Destinations** — all proposals with their estimated cost; the proposal form is disabled once voting concludes.
 - **Navigation links** — Vote (disabled with tooltip when decided), Availability, Wheel of Destiny (when eligible), and Playbook.
 - **Conclude voting now** button (host only, while `voting`) — ends voting early; navigates to the Playbook on a clear winner, or the Wheel of Destiny on a tie.
 - **Leave trip** button (non-host members) — removes you from the trip after confirmation.
@@ -749,8 +750,7 @@ Badges are computed **on-the-fly** every time the dashboard loads. They are base
 | ------------------- | ------------------------------------------------------------------------- |
 | 👑 The Dictator     | Has proposed **more than 5** destinations for this trip.                  |
 | 👻 The Ghost        | Has cast **zero votes** AND the voting deadline is **within 24 hours**.   |
-| 🧮 The Accountant   | Has proposed **2+ destinations**, all with `budgetTier = "low"`.          |
-| 🤔 The Overthinker  | Has changed their vote ranking **more than 3 times** (`changeCount > 3`). |
+|  The Overthinker  | Has changed their vote ranking **more than 3 times** (`changeCount > 3`). |
 | 🎉 The Hype Machine | Was the **first person** to cast a vote for this trip.                    |
 
 A member can hold **multiple badges simultaneously**. Members **can see their own badges** (intentional — the comedy is self-aware).

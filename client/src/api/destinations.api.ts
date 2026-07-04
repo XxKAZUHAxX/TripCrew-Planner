@@ -4,6 +4,7 @@ import type {
     ListDestinationsResponse,
     OkResponse,
     ProposeDestinationRequest,
+    UpdateDestinationRequest,
 } from '@tripcrew/shared';
 import api from './axiosInstance';
 
@@ -17,6 +18,18 @@ export async function proposeDestination(
     payload: ProposeDestinationRequest
 ): Promise<Destination> {
     const { data } = await api.post<DestinationResponse>(`/trips/${tripId}/destinations`, payload);
+    return data.destination;
+}
+
+export async function updateDestination(
+    tripId: string,
+    id: string,
+    payload: UpdateDestinationRequest
+): Promise<Destination> {
+    const { data } = await api.patch<DestinationResponse>(
+        `/trips/${tripId}/destinations/${id}`,
+        payload
+    );
     return data.destination;
 }
 

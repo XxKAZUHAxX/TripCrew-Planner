@@ -30,22 +30,39 @@ describe('destinations', () => {
 
         const d1 = await api('POST', base, {
             token: alice,
-            body: { name: 'Tokyo', description: 'sushi', budgetTier: 'high' },
+            body: { name: 'Tokyo', description: 'sushi', estimatedCost: 8000 },
         });
         assert(d1.status === 201 && d1.data.destination.name === 'Tokyo', 'propose destination');
+        assert(d1.data.destination.estimatedCost === 8000, 'estimatedCost stored');
 
-        const badTier = await api('POST', base, {
+        const badCost = await api('POST', base, {
             token: alice,
-            body: { name: 'X', budgetTier: 'ultra' },
+            body: { name: 'X', estimatedCost: -5 },
         });
-        assert(badTier.status === 400, 'invalid budgetTier rejected');
+        assert(badCost.status === 400, 'negative estimatedCost rejected');
 
         const d2 = await api('POST', base, {
             token: bob,
-            body: { name: 'Bali', budgetTier: 'low' },
+            body: { name: 'Bali', estimatedCost: null },
         });
+        assert(d2.data.destination.estimatedCost === null, 'null estimatedCost allowed');
         const list = await api('GET', base, { token: bob });
         assert(list.data.destinations.length === 2, 'list returns both destinations');
+
+        // Bob (proposer) can edit his destination's cost; validation applies.
+        const edit = await api('PATCH', `${base}/${d2.data.destination._id}`, {
+            token: bob,
+            body: { estimatedCost: 3500 },
+        });
+        assert(
+            edit.status === 200 && edit.data.destination.estimatedCost === 3500,
+            'proposer can edit estimatedCost'
+        );
+        const badEdit = await api('PATCH', `${base}/${d2.data.destination._id}`, {
+            token: bob,
+            body: { estimatedCost: -1 },
+        });
+        assert(badEdit.status === 400, 'negative estimatedCost edit rejected');
 
         // Alice (creator) can delete Bob's destination.
         const del = await api('DELETE', `${base}/${d2.data.destination._id}`, { token: alice });

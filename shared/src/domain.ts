@@ -19,10 +19,8 @@ export type TripStatus = 'voting' | 'decided' | 'archived';
  */
 export type AvailabilityStatus = 'pending' | 'submitted' | 'opted_out';
 
-export type BudgetTier = 'low' | 'medium' | 'high';
-
 export type ArchetypeName =
-    'The Dictator' | 'The Ghost' | 'The Accountant' | 'The Overthinker' | 'The Hype Machine';
+    'The Dictator' | 'The Ghost' | 'The Overthinker' | 'The Hype Machine';
 
 /** The non-sensitive user shape returned by auth endpoints (`toSafeJSON`). */
 export interface User {
@@ -46,7 +44,8 @@ export interface Destination {
     description: string;
     /** A raw id, or a populated reference when the endpoint populates it. */
     proposedBy: string | UserRef;
-    budgetTier: BudgetTier;
+    /** Freeform per-person estimate in ₱, or null when not yet estimated. */
+    estimatedCost: number | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -104,7 +103,7 @@ export interface Availability {
 export interface ScoredDestination {
     destId: string;
     name: string;
-    budgetTier: BudgetTier;
+    estimatedCost: number | null;
     score: number;
 }
 

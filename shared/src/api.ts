@@ -9,7 +9,6 @@ import type {
     Availability,
     AvailabilityStatus,
     BadgeMap,
-    BudgetTier,
     ChecklistItem,
     DeadlockStatus,
     Destination,
@@ -118,7 +117,13 @@ export interface ConcludeResponse {
 export interface ProposeDestinationRequest {
     name: string;
     description?: string;
-    budgetTier?: BudgetTier;
+    /** Optional per-person estimate in ₱; non-negative or null. */
+    estimatedCost?: number | null;
+}
+
+/** Edit a destination's mutable fields (Feature 7). */
+export interface UpdateDestinationRequest {
+    estimatedCost?: number | null;
 }
 
 export interface DestinationResponse {
