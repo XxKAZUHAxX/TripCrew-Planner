@@ -12,6 +12,7 @@ import {
     deleteTrip,
     leaveTrip,
     concludeVoting,
+    updatePlaybookEditors,
 } from '../controllers/trips.controller.js';
 
 const router = Router();
@@ -26,5 +27,13 @@ router.delete('/:tripId', requireAuth, requireMembership, requireCreator, delete
 router.post('/:tripId/leave', requireAuth, requireMembership, leaveTrip);
 router.post('/:tripId/conclude', requireAuth, requireMembership, concludeVoting);
 router.patch('/:tripId/invite', requireAuth, requireMembership, requireCreator, toggleInvite);
+
+router.patch(
+    '/:tripId/playbook-editors',
+    requireAuth,
+    requireMembership,
+    requireCreator,
+    updatePlaybookEditors
+);
 
 export default router;

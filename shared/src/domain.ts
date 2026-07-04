@@ -74,6 +74,7 @@ export interface Trip {
     availabilityDeadline: string | null;
     winningDestination: string | Destination | null;
     instructions: string;
+    playbookEditors: Array<string | UserRef>;
     checklistTemplates: ChecklistTask[];
     createdAt: string;
     updatedAt: string;

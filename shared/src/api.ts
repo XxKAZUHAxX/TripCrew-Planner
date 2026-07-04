@@ -72,6 +72,11 @@ export interface CreateTripRequest {
 
 export type UpdateTripRequest = Partial<CreateTripRequest>;
 
+/** Grant playbook edit rights to the given members (creator-only). */
+export interface UpdatePlaybookEditorsRequest {
+    editorIds: string[];
+}
+
 export interface ToggleInviteRequest {
     inviteActive: boolean;
 }

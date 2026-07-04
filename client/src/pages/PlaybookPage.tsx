@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Pencil, Trophy } from 'lucide-react';
-import type { ChecklistItem, Destination } from '@tripcrew/shared';
+import { ArrowLeft, Pencil, Trophy, Users } from 'lucide-react';
+import type { ChecklistItem, Destination, UserRef } from '@tripcrew/shared';
 import {
     getPlaybook,
     updateInstructions,
@@ -10,7 +10,7 @@ import {
     toggleTask,
     deleteTask,
 } from '@/api/playbook.api';
-import { getTrip } from '@/api/trips.api';
+import { getTrip, updatePlaybookEditors } from '@/api/trips.api';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/errors';
 import { refId } from '@/utils/refs';
@@ -31,7 +31,11 @@ export default function PlaybookPage() {
     const [winningDest, setWinningDest] = useState<Destination | null>(null);
     const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
     const [isCreator, setIsCreator] = useState(false);
+    const [canEdit, setCanEdit] = useState(false);
     const [creatorId, setCreatorId] = useState<string | null>(null);
+    const [members, setMembers] = useState<UserRef[]>([]);
+    const [editorIds, setEditorIds] = useState<string[]>([]);
+    const [savingEditors, setSavingEditors] = useState(false);
     const [memberCount, setMemberCount] = useState(0);
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -43,10 +47,17 @@ export default function PlaybookPage() {
             setInstructions(pb.instructions);
             setWinningDest(pb.winningDestination);
             setChecklist(pb.checklist);
+            setMembers(detail.members);
             setMemberCount(detail.members.length);
             const cId = refId(detail.trip.creator) ?? null;
             setCreatorId(cId);
-            setIsCreator(String(cId) === String(user?.id));
+            const editors = (detail.trip.playbookEditors ?? [])
+                .map((e) => refId(e))
+                .filter((id): id is string => Boolean(id));
+            setEditorIds(editors);
+            const creator = String(cId) === String(user?.id);
+            setIsCreator(creator);
+            setCanEdit(creator || (user?.id ? editors.includes(user.id) : false));
         } catch (err) {
             setError(getErrorMessage(err, 'Failed to load playbook'));
         } finally {
@@ -66,6 +77,25 @@ export default function PlaybookPage() {
             toast.success('Instructions saved.');
         } catch (err) {
             toast.error(getErrorMessage(err, 'Failed to save instructions'));
+        }
+    }
+
+    async function handleToggleEditor(memberId: string) {
+        const next = editorIds.includes(memberId)
+            ? editorIds.filter((id) => id !== memberId)
+            : [...editorIds, memberId];
+        setSavingEditors(true);
+        try {
+            const trip = await updatePlaybookEditors(tripId, next);
+            const updated = (trip.playbookEditors ?? [])
+                .map((e) => refId(e))
+                .filter((id): id is string => Boolean(id));
+            setEditorIds(updated);
+            toast.success('Playbook editors updated.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to update editors'));
+        } finally {
+            setSavingEditors(false);
         }
     }
 
@@ -140,7 +170,7 @@ export default function PlaybookPage() {
             <Card className="mb-4">
                 <CardHeader className="flex-row items-center justify-between pb-3">
                     <CardTitle className="text-lg">Instructions</CardTitle>
-                    {isCreator && (
+                    {canEdit && (
                         <Button variant="outline" size="sm" onClick={() => setEditing((v) => !v)}>
                             <Pencil className="size-4" />
                             {editing ? 'Preview' : 'Edit'}
@@ -148,7 +178,7 @@ export default function PlaybookPage() {
                     )}
                 </CardHeader>
                 <CardContent>
-                    {isCreator && editing ? (
+                    {canEdit && editing ? (
                         <MarkdownEditor
                             instructions={instructions}
                             onSave={handleSaveInstructions}
@@ -158,6 +188,51 @@ export default function PlaybookPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {isCreator && members.length > 1 && (
+                <Card className="mb-4">
+                    <CardHeader className="flex-row items-center gap-2 pb-3">
+                        <Users className="size-4 text-muted-foreground" />
+                        <CardTitle className="text-lg">Playbook editors</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="mb-3 text-sm text-muted-foreground">
+                            Grant members permission to edit the playbook instructions. You can
+                            always edit as the host.
+                        </p>
+                        <ul className="divide-y divide-border">
+                            {members
+                                .filter((m) => m._id !== creatorId)
+                                .map((m) => {
+                                    const granted = editorIds.includes(m._id);
+                                    return (
+                                        <li
+                                            key={m._id}
+                                            className="flex items-center justify-between gap-3 py-2"
+                                        >
+                                            <span className="min-w-0">
+                                                <span className="block truncate text-sm font-medium">
+                                                    {m.name}
+                                                </span>
+                                                <span className="block truncate text-xs text-muted-foreground">
+                                                    {m.email}
+                                                </span>
+                                            </span>
+                                            <Button
+                                                variant={granted ? 'default' : 'outline'}
+                                                size="sm"
+                                                disabled={savingEditors}
+                                                onClick={() => handleToggleEditor(m._id)}
+                                            >
+                                                {granted ? 'Can edit' : 'Grant edit'}
+                                            </Button>
+                                        </li>
+                                    );
+                                })}
+                        </ul>
+                    </CardContent>
+                </Card>
+            )}
 
             <Card>
                 <CardContent className="pt-5">

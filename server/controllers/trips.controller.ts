@@ -111,6 +111,34 @@ export async function updateTrip(req: Request, res: Response, next: NextFunction
     }
 }
 
+// Creator-only (enforced by middleware). Sets the exact list of members granted
+// playbook edit rights. Ignores the creator (always allowed) and any id that
+// isn't a current member of the trip.
+export async function updatePlaybookEditors(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try {
+        const { editorIds } = req.body;
+        if (!Array.isArray(editorIds) || !editorIds.every((id) => typeof id === 'string')) {
+            res.status(400).json({ message: 'editorIds must be an array of strings' });
+            return;
+        }
+        const trip = req.trip;
+        const memberSet = new Set(trip.members.map((m) => m.toString()));
+        const creatorId = trip.creator.toString();
+        const next = [...new Set(editorIds)].filter(
+            (id) => memberSet.has(id) && id !== creatorId
+        );
+        trip.playbookEditors = next.map((id) => new Types.ObjectId(id));
+        await trip.save();
+        res.json({ trip });
+    } catch (err) {
+        next(err);
+    }
+}
+
 export async function joinTrip(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
         const { inviteCode } = req.params;

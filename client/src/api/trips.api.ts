@@ -43,6 +43,13 @@ export async function toggleInvite(tripId: string, inviteActive: boolean): Promi
     return data.trip;
 }
 
+export async function updatePlaybookEditors(tripId: string, editorIds: string[]): Promise<Trip> {
+    const { data } = await api.patch<TripResponse>(`/trips/${tripId}/playbook-editors`, {
+        editorIds,
+    });
+    return data.trip;
+}
+
 export async function getDashboard(tripId: string): Promise<DashboardResponse> {
     const { data } = await api.get<DashboardResponse>(`/trips/${tripId}/dashboard`);
     return data;

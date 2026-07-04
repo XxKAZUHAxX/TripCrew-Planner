@@ -50,3 +50,17 @@ export function requireDecided(req: Request, res: Response, next: NextFunction):
     }
     next();
 }
+
+// Playbook edit gate (Feature 9): the creator or any granted editor may pass.
+// Must run AFTER requireMembership (relies on req.trip).
+export function requirePlaybookEditor(req: Request, res: Response, next: NextFunction): void {
+    if (!req.trip) {
+        res.status(500).json({ message: 'requirePlaybookEditor used without requireMembership' });
+        return;
+    }
+    if (!req.trip.canEditPlaybook(req.user.id)) {
+        res.status(403).json({ message: 'You do not have permission to edit the playbook' });
+        return;
+    }
+    next();
+}

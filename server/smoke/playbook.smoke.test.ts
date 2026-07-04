@@ -110,4 +110,99 @@ describe('playbook', () => {
         assert(aliceView.data.checklist[0].completedByMe === false, 'alice un-completed');
         assert(aliceView.data.checklist[0].completedByCount === 1, 'only bob remains done');
     });
+
+    it('grants and revokes playbook edit access to specific members (F9)', async () => {
+        const { api } = h;
+
+        async function makeUser(
+            name: string,
+            email: string
+        ): Promise<{ token: string; id: string }> {
+            const r = await api('POST', '/api/auth/register', {
+                body: { name, email, password: 'pw12345' },
+            });
+            return { token: r.data.token, id: r.data.user.id };
+        }
+
+        const host = await makeUser('Host', 'host-f9@example.com');
+        const editor = await makeUser('Editor', 'editor-f9@example.com');
+        const other = await makeUser('Other', 'other-f9@example.com');
+        const trip = (
+            await api('POST', '/api/trips', {
+                token: host.token,
+                body: { title: 'F9 Trip', votingDeadline: '2020-01-01T00:00:00.000Z' },
+            })
+        ).data.trip;
+        await api('POST', `/api/trips/join/${trip.inviteCode}`, { token: editor.token });
+        await api('POST', `/api/trips/join/${trip.inviteCode}`, { token: other.token });
+        const tBase = `/api/trips/${trip._id}`;
+        const pBase = `${tBase}/playbook`;
+
+        // Decide the trip so the playbook unlocks. With a past voting deadline and
+        // low turnout, the wheel is eligible via timeout without any votes.
+        await api('POST', `${tBase}/destinations`, {
+            token: host.token,
+            body: { name: 'Osaka' },
+        });
+        await api('POST', `${tBase}/destinations`, {
+            token: host.token,
+            body: { name: 'Kyoto' },
+        });
+        const spin = await api('POST', `${tBase}/wheel/spin`, { token: host.token });
+        assert(spin.status === 200, 'wheel decides the trip via timeout');
+
+        // Before a grant, the editor cannot edit.
+        const denied = await api('PATCH', `${pBase}/instructions`, {
+            token: editor.token,
+            body: { instructions: 'nope' },
+        });
+        assert(denied.status === 403, 'member cannot edit before grant');
+
+        // Only the host may set editors.
+        const forbidden = await api('PATCH', `${tBase}/playbook-editors`, {
+            token: editor.token,
+            body: { editorIds: [editor.id] },
+        });
+        assert(forbidden.status === 403, 'non-host cannot set playbook editors');
+
+        // Host grants edit access to the editor only.
+        const grant = await api('PATCH', `${tBase}/playbook-editors`, {
+            token: host.token,
+            body: { editorIds: [editor.id, host.id, 'notamember'] },
+        });
+        assert(grant.status === 200, 'host grants editors');
+        // Creator and non-members are filtered out.
+        assert(
+            grant.data.trip.playbookEditors.length === 1 &&
+                grant.data.trip.playbookEditors[0] === editor.id,
+            'only the valid member is stored as editor'
+        );
+
+        // The granted editor can now edit; the other member still cannot.
+        const editorEdit = await api('PATCH', `${pBase}/instructions`, {
+            token: editor.token,
+            body: { instructions: '# By editor' },
+        });
+        assert(
+            editorEdit.status === 200 && editorEdit.data.instructions.includes('By editor'),
+            'granted editor edits instructions'
+        );
+        const otherEdit = await api('PATCH', `${pBase}/instructions`, {
+            token: other.token,
+            body: { instructions: 'nope' },
+        });
+        assert(otherEdit.status === 403, 'ungranted member still cannot edit');
+
+        // Host revokes access.
+        const revoke = await api('PATCH', `${tBase}/playbook-editors`, {
+            token: host.token,
+            body: { editorIds: [] },
+        });
+        assert(revoke.status === 200 && revoke.data.trip.playbookEditors.length === 0, 'revoked');
+        const afterRevoke = await api('PATCH', `${pBase}/instructions`, {
+            token: editor.token,
+            body: { instructions: 'nope again' },
+        });
+        assert(afterRevoke.status === 403, 'editor cannot edit after revoke');
+    });
 });
