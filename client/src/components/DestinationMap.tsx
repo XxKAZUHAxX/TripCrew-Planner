@@ -35,13 +35,22 @@ function ClickHandler({ onPick }: { onPick: (loc: LatLng) => void }) {
     return null;
 }
 
-export default function DestinationMap({ location, editable = false, onPick }: DestinationMapProps) {
+export default function DestinationMap({
+    location,
+    editable = false,
+    onPick,
+}: DestinationMapProps) {
     const center: [number, number] = location ? [location.lat, location.lng] : DEFAULT_CENTER;
     const zoom = location ? 11 : 5;
 
     return (
         <div className="overflow-hidden rounded-md border">
-            <MapContainer center={center} zoom={zoom} scrollWheelZoom={false} className="h-56 w-full">
+            <MapContainer
+                center={center}
+                zoom={zoom}
+                scrollWheelZoom={false}
+                className="h-56 w-full"
+            >
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

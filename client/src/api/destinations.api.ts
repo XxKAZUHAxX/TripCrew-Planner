@@ -56,3 +56,28 @@ export async function deleteComment(
     );
     return data.destination;
 }
+
+export async function uploadImages(
+    tripId: string,
+    id: string,
+    files: File[]
+): Promise<Destination> {
+    const form = new FormData();
+    files.forEach((f) => form.append('images', f));
+    const { data } = await api.post<DestinationResponse>(
+        `/trips/${tripId}/destinations/${id}/images`,
+        form
+    );
+    return data.destination;
+}
+
+export async function deleteDestinationImage(
+    tripId: string,
+    id: string,
+    imageId: string
+): Promise<Destination> {
+    const { data } = await api.delete<DestinationResponse>(
+        `/trips/${tripId}/destinations/${id}/images/${imageId}`
+    );
+    return data.destination;
+}

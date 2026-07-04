@@ -29,6 +29,8 @@ interface DestinationListProps {
     ) => void | Promise<void>;
     onAddComment: (id: string, text: string) => void | Promise<void>;
     onDeleteComment: (id: string, commentId: string) => void | Promise<void>;
+    onUploadImages: (id: string, files: File[]) => void | Promise<void>;
+    onDeleteImage: (id: string, imageId: string) => void | Promise<void>;
 }
 
 export default function DestinationList({
@@ -42,6 +44,8 @@ export default function DestinationList({
     onUpdateDetails,
     onAddComment,
     onDeleteComment,
+    onUploadImages,
+    onDeleteImage,
 }: DestinationListProps) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -141,6 +145,8 @@ export default function DestinationList({
                                 onUpdateDetails={onUpdateDetails}
                                 onAddComment={onAddComment}
                                 onDeleteComment={onDeleteComment}
+                                onUploadImages={onUploadImages}
+                                onDeleteImage={onDeleteImage}
                             />
                         );
                     })}

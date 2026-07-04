@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
     Trash2,
     Pencil,
@@ -8,6 +8,7 @@ import {
     MessageSquare,
     ExternalLink,
     Send,
+    ImagePlus,
 } from 'lucide-react';
 import type { Destination, UserRef } from '@tripcrew/shared';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +40,8 @@ interface DestinationCardProps {
     onUpdateDetails?: (id: string, payload: DetailsPayload) => void | Promise<void>;
     onAddComment?: (id: string, text: string) => void | Promise<void>;
     onDeleteComment?: (id: string, commentId: string) => void | Promise<void>;
+    onUploadImages?: (id: string, files: File[]) => void | Promise<void>;
+    onDeleteImage?: (id: string, imageId: string) => void | Promise<void>;
 }
 
 function authorName(ref: string | UserRef): string {
@@ -56,6 +59,8 @@ export default function DestinationCard({
     onUpdateDetails,
     onAddComment,
     onDeleteComment,
+    onUploadImages,
+    onDeleteImage,
 }: DestinationCardProps) {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [editing, setEditing] = useState(false);
@@ -72,8 +77,13 @@ export default function DestinationCard({
     const [commentInput, setCommentInput] = useState('');
     const [postingComment, setPostingComment] = useState(false);
 
+    // Photo gallery (Feature 6).
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
+
     const canComment = Boolean(onAddComment);
     const canEditDetails = Boolean(onUpdateDetails);
+    const canUpload = Boolean(onUploadImages);
     const commentCount = destination.comments.length;
 
     function startEdit() {
@@ -131,6 +141,17 @@ export default function DestinationCard({
             setCommentInput('');
         } finally {
             setPostingComment(false);
+        }
+    }
+
+    async function handleFiles(fileList: FileList | null) {
+        if (!onUploadImages || !fileList || fileList.length === 0) return;
+        setUploading(true);
+        try {
+            await onUploadImages(destination._id, Array.from(fileList));
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     }
 
@@ -320,6 +341,77 @@ export default function DestinationCard({
                     )}
 
                     <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <p className="text-xs font-semibold text-muted-foreground">Photos</p>
+                            {canUpload && (
+                                <>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp,image/gif"
+                                        multiple
+                                        className="hidden"
+                                        onChange={(e) => handleFiles(e.target.files)}
+                                    />
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={uploading}
+                                    >
+                                        <ImagePlus className="size-3.5" />
+                                        {uploading ? 'Uploading…' : 'Add photos'}
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                        {destination.images.length === 0 ? (
+                            <p className="text-sm italic text-muted-foreground">No photos yet.</p>
+                        ) : (
+                            <div className="grid grid-cols-3 gap-2">
+                                {destination.images.map((img) => {
+                                    const uploaderId = refId(img.uploadedBy);
+                                    const canRemove =
+                                        onDeleteImage !== undefined &&
+                                        (uploaderId === currentUserId ||
+                                            creatorId === currentUserId);
+                                    return (
+                                        <div
+                                            key={img._id}
+                                            className="group relative aspect-square overflow-hidden rounded-md border"
+                                        >
+                                            <a
+                                                href={img.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                <img
+                                                    src={img.url}
+                                                    alt={`${destination.name} photo`}
+                                                    loading="lazy"
+                                                    className="size-full object-cover"
+                                                />
+                                            </a>
+                                            {canRemove && (
+                                                <button
+                                                    type="button"
+                                                    aria-label="Delete photo"
+                                                    className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-background/80 text-muted-foreground opacity-0 shadow-sm transition hover:text-destructive group-hover:opacity-100"
+                                                    onClick={() =>
+                                                        onDeleteImage?.(destination._id, img._id)
+                                                    }
+                                                >
+                                                    <X className="size-3.5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-2">
                         <p className="text-xs font-semibold text-muted-foreground">Location</p>
                         <DestinationMap
                             location={destination.location}
@@ -334,9 +426,7 @@ export default function DestinationCard({
                             <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() =>
-                                    onUpdateDetails(destination._id, { location: null })
-                                }
+                                onClick={() => onUpdateDetails(destination._id, { location: null })}
                             >
                                 <X className="size-3.5" />
                                 Clear pin

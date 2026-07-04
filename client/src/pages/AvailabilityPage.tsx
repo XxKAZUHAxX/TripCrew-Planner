@@ -52,7 +52,7 @@ function toDateTimeLocal(iso: string | null): string {
 }
 
 // Allow navigating from the current month up to this many months forward.
-const MAX_MONTHS_FORWARD = 6;
+const MAX_MONTHS_FORWARD = 12;
 
 function monthRefFromOffset(offset: number): { year: number; monthIndex: number } {
     const now = new Date();
@@ -96,7 +96,7 @@ export default function AvailabilityPage() {
     }, [summary]);
 
     // The "best dates" panel only ever surfaces the strongest few overlaps.
-    const topDates = summary.slice(0, 3);
+    const topDates = summary.slice(0, 5);
 
     const refreshGroupData = useCallback(async () => {
         const [heat, sum] = await Promise.all([getHeatmap(tripId), getAvailabilitySummary(tripId)]);

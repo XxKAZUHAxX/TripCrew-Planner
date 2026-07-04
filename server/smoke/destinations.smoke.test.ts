@@ -158,7 +158,8 @@ describe('destinations', () => {
         const trip = (await api('POST', '/api/trips', { token, body: { title: 'F5 Trip' } })).data
             .trip;
         const base = `/api/trips/${trip._id}/destinations`;
-        const dest = (await api('POST', base, { token, body: { name: 'Baguio' } })).data.destination;
+        const dest = (await api('POST', base, { token, body: { name: 'Baguio' } })).data
+            .destination;
         const dBase = `${base}/${dest._id}`;
 
         const bad = await api('PATCH', dBase, {
@@ -180,5 +181,28 @@ describe('destinations', () => {
 
         const cleared = await api('PATCH', dBase, { token, body: { location: null } });
         assert(cleared.status === 200 && cleared.data.destination.location === null, 'pin cleared');
+    });
+
+    it('returns 503 for photo upload when storage is not configured (F6)', async () => {
+        const { api } = h;
+        const reg = await api('POST', '/api/auth/register', {
+            body: { name: 'Cam', email: 'cam-f6@example.com', password: 'pw12345' },
+        });
+        const token = reg.data.token;
+        const trip = (await api('POST', '/api/trips', { token, body: { title: 'F6 Trip' } })).data
+            .trip;
+        const base = `/api/trips/${trip._id}/destinations`;
+        const dest = (await api('POST', base, { token, body: { name: 'Palawan' } })).data
+            .destination;
+
+        // No R2 env in the test environment → uploads are gracefully disabled.
+        const upload = await api('POST', `${base}/${dest._id}/images`, { token, body: {} });
+        assert(upload.status === 503, 'upload disabled without storage config');
+
+        // Deleting a non-existent image still resolves membership + 404s cleanly.
+        const del = await api('DELETE', `${base}/${dest._id}/images/000000000000000000000000`, {
+            token,
+        });
+        assert(del.status === 404, 'delete missing image returns 404');
     });
 });

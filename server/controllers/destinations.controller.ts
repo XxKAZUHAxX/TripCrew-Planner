@@ -1,6 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
 import Destination from '../models/Destination.js';
+import {
+    isStorageConfigured,
+    uploadImage,
+    deleteImage as removeImageObject,
+} from '../config/storage.js';
 
 // Validates a freeform estimated cost: null clears it, otherwise a finite
 // non-negative number. Returns true when the value is acceptable.
@@ -69,7 +74,8 @@ function isValidLocation(value: unknown): value is { lat: number; lng: number } 
 async function populated(id: Types.ObjectId | string) {
     return Destination.findById(id)
         .populate('proposedBy', 'name email')
-        .populate('comments.userId', 'name email');
+        .populate('comments.userId', 'name email')
+        .populate('images.uploadedBy', 'name email');
 }
 
 export async function proposeDestination(
@@ -216,6 +222,88 @@ export async function deleteComment(
             return;
         }
         comment.deleteOne();
+        await destination.save();
+        res.json({ destination: await populated(destination._id) });
+    } catch (err) {
+        next(err);
+    }
+}
+
+// Any trip member may upload photos, during or after voting (Feature 6). The
+// multer middleware has already validated type/size and populated req.files.
+export async function uploadImages(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        if (!isStorageConfigured()) {
+            res.status(503).json({
+                message: 'Photo uploads are not configured on this server.',
+            });
+            return;
+        }
+        const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+        if (files.length === 0) {
+            res.status(400).json({ message: 'No image files provided' });
+            return;
+        }
+        const destination = await Destination.findOne({
+            _id: req.params.id,
+            tripId: req.trip._id,
+        });
+        if (!destination) {
+            res.status(404).json({ message: 'Destination not found' });
+            return;
+        }
+        for (const file of files) {
+            const stored = await uploadImage(
+                destination._id.toString(),
+                file.buffer,
+                file.mimetype
+            );
+            destination.images.push({
+                url: stored.url,
+                key: stored.key,
+                uploadedBy: new Types.ObjectId(req.user.id),
+            });
+        }
+        await destination.save();
+        res.status(201).json({ destination: await populated(destination._id) });
+    } catch (err) {
+        next(err);
+    }
+}
+
+// The uploader or the trip creator may delete a photo (Feature 6).
+export async function deleteImage(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const destination = await Destination.findOne({
+            _id: req.params.id,
+            tripId: req.trip._id,
+        });
+        if (!destination) {
+            res.status(404).json({ message: 'Destination not found' });
+            return;
+        }
+        const image = destination.images.id(req.params.imageId!);
+        if (!image) {
+            res.status(404).json({ message: 'Image not found' });
+            return;
+        }
+        const isUploader = image.uploadedBy.equals(req.user.id);
+        const isCreator = req.trip.isCreator(req.user.id);
+        if (!isUploader && !isCreator) {
+            res.status(403).json({
+                message: 'Only the uploader or trip creator can delete this photo',
+            });
+            return;
+        }
+        if (isStorageConfigured()) {
+            // Best-effort: a failed object delete shouldn't block removing the ref.
+            try {
+                await removeImageObject(image.key);
+            } catch {
+                /* ignore storage errors */
+            }
+        }
+        image.deleteOne();
         await destination.save();
         res.json({ destination: await populated(destination._id) });
     } catch (err) {

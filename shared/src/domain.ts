@@ -52,6 +52,8 @@ export interface Destination {
     comments: DestinationComment[];
     /** Pinned map location (Feature 5), or null when no pin has been dropped. */
     location: { lat: number; lng: number } | null;
+    /** Uploaded photo gallery (Feature 6). */
+    images: DestinationImage[];
     createdAt: string;
     updatedAt: string;
 }
@@ -61,6 +63,16 @@ export interface DestinationComment {
     _id: string;
     userId: string | UserRef;
     text: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+/** An uploaded destination photo. */
+export interface DestinationImage {
+    _id: string;
+    url: string;
+    key: string;
+    uploadedBy: string | UserRef;
     createdAt: string;
     updatedAt: string;
 }

@@ -35,6 +35,8 @@ import {
     updateDestination,
     addComment,
     deleteComment,
+    uploadImages,
+    deleteDestinationImage,
 } from '@/api/destinations.api';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/errors';
@@ -180,6 +182,26 @@ export default function TripDashboard() {
             toast.success('Comment deleted.');
         } catch (err) {
             toast.error(getErrorMessage(err, 'Failed to delete comment'));
+        }
+    }
+
+    async function handleUploadImages(id: string, files: File[]) {
+        try {
+            await uploadImages(tripId, id, files);
+            await load();
+            toast.success('Photos uploaded.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to upload photos'));
+        }
+    }
+
+    async function handleDeleteImage(id: string, imageId: string) {
+        try {
+            await deleteDestinationImage(tripId, id, imageId);
+            await load();
+            toast.success('Photo deleted.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to delete photo'));
         }
     }
 
@@ -447,6 +469,8 @@ export default function TripDashboard() {
                         onUpdateDetails={handleUpdateDetails}
                         onAddComment={handleAddComment}
                         onDeleteComment={handleDeleteComment}
+                        onUploadImages={handleUploadImages}
+                        onDeleteImage={handleDeleteImage}
                     />
                 </div>
 
