@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Users } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Users, CalendarClock } from 'lucide-react';
 import type { AvailabilitySummaryEntry, Heatmap } from '@tripcrew/shared';
 import {
     getMyAvailability,
@@ -9,17 +9,32 @@ import {
     getHeatmap,
     getAvailabilitySummary,
 } from '@/api/availability.api';
+import { getTrip, updateTrip } from '@/api/trips.api';
+import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/errors';
 import { formatDeadline } from '@/utils/deadline';
+import { refId } from '@/utils/refs';
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageLoader } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
+import DeadlineBadge from '@/components/DeadlineBadge';
 import CalendarGrid from '@/components/CalendarGrid';
 
 type DragMode = 'add' | 'remove';
+
+// Convert an ISO timestamp to the value a <input type="datetime-local"> expects
+// (local time, no timezone suffix). Returns '' for null/invalid input.
+function toDateTimeLocal(iso: string | null): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 // Allow navigating from the current month up to this many months forward.
 const MAX_MONTHS_FORWARD = 6;
@@ -32,6 +47,7 @@ function monthRefFromOffset(offset: number): { year: number; monthIndex: number 
 
 export default function AvailabilityPage() {
     const { tripId } = useParams() as { tripId: string };
+    const { user } = useAuth();
     const [myDates, setMyDates] = useState<Set<string>>(new Set());
     const [heatmap, setHeatmap] = useState<Heatmap>({});
     const [summary, setSummary] = useState<AvailabilitySummaryEntry[]>([]);
@@ -41,6 +57,13 @@ export default function AvailabilityPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Availability deadline (Feature 10) — host-settable, must be >= votingDeadline.
+    const [isHost, setIsHost] = useState(false);
+    const [votingDeadline, setVotingDeadline] = useState<string | null>(null);
+    const [availabilityDeadline, setAvailabilityDeadline] = useState<string | null>(null);
+    const [deadlineInput, setDeadlineInput] = useState('');
+    const [savingDeadline, setSavingDeadline] = useState(false);
 
     const dragRef = useRef<{ active: boolean; mode: DragMode }>({ active: false, mode: 'add' });
     const { year, monthIndex } = monthRefFromOffset(monthOffset);
@@ -54,14 +77,22 @@ export default function AvailabilityPage() {
 
     const loadData = useCallback(async () => {
         try {
-            const [dates] = await Promise.all([getMyAvailability(tripId), refreshGroupData()]);
+            const [dates, detail] = await Promise.all([
+                getMyAvailability(tripId),
+                getTrip(tripId),
+                refreshGroupData(),
+            ]);
             setMyDates(new Set(dates));
+            setIsHost(refId(detail.trip.creator) === user?.id);
+            setVotingDeadline(detail.trip.votingDeadline);
+            setAvailabilityDeadline(detail.trip.availabilityDeadline);
+            setDeadlineInput(toDateTimeLocal(detail.trip.availabilityDeadline));
         } catch (err) {
             setError(getErrorMessage(err, 'Failed to load availability'));
         } finally {
             setLoading(false);
         }
-    }, [tripId, refreshGroupData]);
+    }, [tripId, refreshGroupData, user?.id]);
 
     useEffect(() => {
         loadData();
@@ -114,6 +145,28 @@ export default function AvailabilityPage() {
         }
     }
 
+    async function handleSaveDeadline() {
+        const iso = deadlineInput ? new Date(deadlineInput).toISOString() : null;
+        // Mirror the server rule: availability deadline must be >= voting deadline.
+        if (iso && votingDeadline && new Date(iso) < new Date(votingDeadline)) {
+            const msg = 'Availability deadline must be on or after the voting deadline.';
+            setError(msg);
+            toast.error(msg);
+            return;
+        }
+        setSavingDeadline(true);
+        try {
+            const trip = await updateTrip(tripId, { availabilityDeadline: iso });
+            setAvailabilityDeadline(trip.availabilityDeadline);
+            setDeadlineInput(toDateTimeLocal(trip.availabilityDeadline));
+            toast.success('Availability deadline updated.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to update deadline'));
+        } finally {
+            setSavingDeadline(false);
+        }
+    }
+
     if (loading) return <PageLoader />;
 
     return (
@@ -138,6 +191,44 @@ export default function AvailabilityPage() {
                 automatically when you finish.
                 {saving && <span className="ml-2 text-foreground">Saving…</span>}
             </p>
+            <Card className="mb-4">
+                <CardContent className="pt-5">
+                    <div className="flex items-center gap-2">
+                        <CalendarClock className="size-4 text-muted-foreground" />
+                        <span className="font-semibold">Availability deadline</span>
+                    </div>
+                    <p className="mt-1 text-sm">
+                        <DeadlineBadge deadline={availabilityDeadline} label="Availability" />
+                    </p>
+                    {isHost && (
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <Input
+                                type="datetime-local"
+                                value={deadlineInput}
+                                onChange={(e) => setDeadlineInput(e.target.value)}
+                                className="sm:max-w-xs"
+                                aria-label="Availability deadline"
+                            />
+                            <Button
+                                variant="outline"
+                                onClick={handleSaveDeadline}
+                                disabled={savingDeadline}
+                            >
+                                {savingDeadline ? 'Saving…' : 'Save deadline'}
+                            </Button>
+                        </div>
+                    )}
+                    {isHost && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                            Must be on or after the voting deadline
+                            {votingDeadline
+                                ? ` (${formatDeadline(votingDeadline)})`
+                                : ' (none set)'}
+                            .
+                        </p>
+                    )}
+                </CardContent>
+            </Card>
             <Card>
                 <CardContent className="pt-6">
                     <div className="mb-4 flex items-center justify-between">

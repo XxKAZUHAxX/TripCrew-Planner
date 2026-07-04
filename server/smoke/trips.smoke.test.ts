@@ -73,4 +73,37 @@ describe('trips', () => {
         const carolJoin = await api('POST', `/api/trips/join/${code}`, { token: carol });
         assert(carolJoin.status === 403, 'join blocked when inviteActive is false');
     });
+
+    it('validates the availability deadline against the voting deadline', async () => {
+        const { api } = h;
+        const reg = await api('POST', '/api/auth/register', {
+            body: { name: 'Dana', email: 'dana@example.com', password: 'pw12345' },
+        });
+        const token = reg.data.token;
+
+        const voting = '2026-08-01T00:00:00.000Z';
+        const created = await api('POST', '/api/trips', {
+            token,
+            body: { title: 'Deadline Trip', votingDeadline: voting },
+        });
+        assert(created.status === 201, 'create trip with voting deadline');
+        const tripId = created.data.trip._id;
+
+        // Availability deadline before the voting deadline is rejected.
+        const tooEarly = await api('PATCH', `/api/trips/${tripId}`, {
+            token,
+            body: { availabilityDeadline: '2026-07-15T00:00:00.000Z' },
+        });
+        assert(tooEarly.status === 400, 'availability deadline before voting deadline rejected');
+
+        // On/after the voting deadline is accepted.
+        const ok = await api('PATCH', `/api/trips/${tripId}`, {
+            token,
+            body: { availabilityDeadline: '2026-08-10T00:00:00.000Z' },
+        });
+        assert(
+            ok.status === 200 && ok.data.trip.availabilityDeadline != null,
+            'availability deadline on/after voting deadline accepted'
+        );
+    });
 });

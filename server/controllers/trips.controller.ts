@@ -7,11 +7,31 @@ import Availability from '../models/Availability.js';
 import { evaluateDeadlock } from '../utils/deadlock.js';
 import { rankByScore } from '../utils/borda.js';
 
+// The availability deadline may never precede the voting deadline: dates are
+// only meaningful once a destination race is closing. Returns an error message
+// when the pair is invalid, or null when it's acceptable.
+function deadlineOrderError(
+    votingDeadline: Date | null,
+    availabilityDeadline: Date | null
+): string | null {
+    if (votingDeadline && availabilityDeadline && availabilityDeadline < votingDeadline) {
+        return 'Availability deadline must be on or after the voting deadline.';
+    }
+    return null;
+}
+
 export async function createTrip(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const { title, startDate, endDate, votingDeadline } = req.body;
+        const { title, startDate, endDate, votingDeadline, availabilityDeadline } = req.body;
         if (!title) {
             res.status(400).json({ message: 'title is required' });
+            return;
+        }
+        const voting = votingDeadline ? new Date(votingDeadline) : null;
+        const availability = availabilityDeadline ? new Date(availabilityDeadline) : null;
+        const deadlineError = deadlineOrderError(voting, availability);
+        if (deadlineError) {
+            res.status(400).json({ message: deadlineError });
             return;
         }
         const userId = new Types.ObjectId(req.user.id);
@@ -21,7 +41,8 @@ export async function createTrip(req: Request, res: Response, next: NextFunction
             members: [userId],
             startDate: startDate ? new Date(startDate) : null,
             endDate: endDate ? new Date(endDate) : null,
-            votingDeadline: votingDeadline ? new Date(votingDeadline) : null,
+            votingDeadline: voting,
+            availabilityDeadline: availability,
         });
         res.status(201).json({ trip });
     } catch (err) {
@@ -54,14 +75,34 @@ export async function getTrip(req: Request, res: Response, next: NextFunction): 
 
 export async function updateTrip(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const { title, startDate, endDate, votingDeadline } = req.body;
+        const { title, startDate, endDate, votingDeadline, availabilityDeadline } = req.body;
         const trip = req.trip;
+
+        // Resolve the post-update deadline pair so the ordering rule holds even
+        // when only one of the two is being changed in this request.
+        const nextVoting =
+            votingDeadline !== undefined
+                ? votingDeadline
+                    ? new Date(votingDeadline)
+                    : null
+                : trip.votingDeadline;
+        const nextAvailability =
+            availabilityDeadline !== undefined
+                ? availabilityDeadline
+                    ? new Date(availabilityDeadline)
+                    : null
+                : trip.availabilityDeadline;
+        const deadlineError = deadlineOrderError(nextVoting, nextAvailability);
+        if (deadlineError) {
+            res.status(400).json({ message: deadlineError });
+            return;
+        }
+
         if (title !== undefined) trip.title = title;
         if (startDate !== undefined) trip.startDate = startDate ? new Date(startDate) : null;
         if (endDate !== undefined) trip.endDate = endDate ? new Date(endDate) : null;
-        if (votingDeadline !== undefined) {
-            trip.votingDeadline = votingDeadline ? new Date(votingDeadline) : null;
-        }
+        if (votingDeadline !== undefined) trip.votingDeadline = nextVoting;
+        if (availabilityDeadline !== undefined) trip.availabilityDeadline = nextAvailability;
         await trip.save();
         res.json({ trip });
     } catch (err) {
