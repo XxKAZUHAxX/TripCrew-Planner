@@ -64,6 +64,7 @@ export interface Trip {
     startDate: string | null;
     endDate: string | null;
     votingDeadline: string | null;
+    availabilityDeadline: string | null;
     winningDestination: string | Destination | null;
     instructions: string;
     checklistTemplates: ChecklistTask[];

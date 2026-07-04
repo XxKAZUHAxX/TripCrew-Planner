@@ -6,17 +6,23 @@ import { FORTY_EIGHT_HOURS_MS, formatCountdown, formatDeadline, msUntil } from '
 interface DeadlineBadgeProps {
     /** ISO deadline string, or null if none set. */
     deadline: string | null | undefined;
+    /** What the deadline governs; used in the copy. Defaults to "Voting". */
+    label?: string;
     className?: string;
 }
 
 /**
- * Displays the voting deadline with four states (Issue 3):
- *  - none set  -> "No voting deadline set."
- *  - > 48h     -> "Voting closes: <date>"
+ * Displays a deadline with four states (Issue 3):
+ *  - none set  -> "No <label> deadline set."
+ *  - > 48h     -> "<label> closes: <date>"
  *  - < 48h     -> live "Closes in 23h 41m"
- *  - passed    -> "Voting deadline has passed."
+ *  - passed    -> "<label> deadline has passed."
  */
-export default function DeadlineBadge({ deadline, className }: DeadlineBadgeProps) {
+export default function DeadlineBadge({
+    deadline,
+    label = 'Voting',
+    className,
+}: DeadlineBadgeProps) {
     const [now, setNow] = useState(() => Date.now());
 
     const remaining = msUntil(deadline, now);
@@ -38,7 +44,7 @@ export default function DeadlineBadge({ deadline, className }: DeadlineBadgeProp
                 )}
             >
                 <CalendarClock className="size-4" />
-                No voting deadline set.
+                No {label.toLowerCase()} deadline set.
             </span>
         );
     }
@@ -52,7 +58,7 @@ export default function DeadlineBadge({ deadline, className }: DeadlineBadgeProp
                 )}
             >
                 <AlertTriangle className="size-4" />
-                Voting deadline has passed.
+                {label} deadline has passed.
             </span>
         );
     }
@@ -79,7 +85,7 @@ export default function DeadlineBadge({ deadline, className }: DeadlineBadgeProp
             )}
         >
             <CalendarClock className="size-4" />
-            Voting closes: {formatDeadline(deadline)}
+            {label} closes: {formatDeadline(deadline)}
         </span>
     );
 }

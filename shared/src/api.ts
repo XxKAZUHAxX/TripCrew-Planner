@@ -56,6 +56,8 @@ export interface CreateTripRequest {
     startDate?: string | null;
     endDate?: string | null;
     votingDeadline?: string | null;
+    /** Must be on or after votingDeadline when both are set. */
+    availabilityDeadline?: string | null;
 }
 
 export type UpdateTripRequest = Partial<CreateTripRequest>;

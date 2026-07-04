@@ -29,6 +29,7 @@ export interface ITrip {
     startDate: Date | null;
     endDate: Date | null;
     votingDeadline: Date | null;
+    availabilityDeadline: Date | null;
     winningDestination: Types.ObjectId | null;
     // Playbook instructions stored inline (Feature 4, Decision 1).
     instructions: string;
@@ -69,6 +70,7 @@ const tripSchema = new Schema<ITrip, TripModel, ITripMethods>(
         startDate: { type: Date, default: null },
         endDate: { type: Date, default: null },
         votingDeadline: { type: Date, default: null },
+        availabilityDeadline: { type: Date, default: null },
         winningDestination: {
             type: Schema.Types.ObjectId,
             ref: 'Destination',
