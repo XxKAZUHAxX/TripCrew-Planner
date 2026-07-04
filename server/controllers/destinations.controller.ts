@@ -48,6 +48,23 @@ function sanitizeTags(value: unknown): string[] {
     return out;
 }
 
+// A valid pin is null (clears it) or a {lat,lng} pair within earth's bounds.
+function isValidLocation(value: unknown): value is { lat: number; lng: number } | null {
+    if (value === null) return true;
+    if (typeof value !== 'object') return false;
+    const { lat, lng } = value as Record<string, unknown>;
+    return (
+        typeof lat === 'number' &&
+        Number.isFinite(lat) &&
+        lat >= -90 &&
+        lat <= 90 &&
+        typeof lng === 'number' &&
+        Number.isFinite(lng) &&
+        lng >= -180 &&
+        lng <= 180
+    );
+}
+
 // Re-fetches a destination with author references populated for API responses.
 async function populated(id: Types.ObjectId | string) {
     return Destination.findById(id)
@@ -98,7 +115,7 @@ export async function updateDestination(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { estimatedCost, notes, links, tags } = req.body;
+        const { estimatedCost, notes, links, tags, location } = req.body;
         if (estimatedCost !== undefined && !isValidCost(estimatedCost)) {
             res.status(400).json({
                 message: 'estimatedCost must be a non-negative number or null',
@@ -107,6 +124,10 @@ export async function updateDestination(
         }
         if (notes !== undefined && typeof notes !== 'string') {
             res.status(400).json({ message: 'notes must be a string' });
+            return;
+        }
+        if (location !== undefined && !isValidLocation(location)) {
+            res.status(400).json({ message: 'location must be a valid {lat,lng} pair or null' });
             return;
         }
         const destination = await Destination.findOne({
@@ -131,6 +152,7 @@ export async function updateDestination(
         if (notes !== undefined) destination.notes = notes;
         if (links !== undefined) destination.links = sanitizeLinks(links);
         if (tags !== undefined) destination.tags = sanitizeTags(tags);
+        if (location !== undefined) destination.location = location;
         await destination.save();
         res.json({ destination: await populated(destination._id) });
     } catch (err) {
@@ -166,7 +188,11 @@ export async function addComment(req: Request, res: Response, next: NextFunction
 }
 
 // The comment author or the trip creator may delete a comment (Feature 4).
-export async function deleteComment(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function deleteComment(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
     try {
         const destination = await Destination.findOne({
             _id: req.params.id,

@@ -148,7 +148,12 @@ export default function TripDashboard() {
 
     async function handleUpdateDetails(
         id: string,
-        payload: { notes?: string; links?: string[]; tags?: string[] }
+        payload: {
+            notes?: string;
+            links?: string[];
+            tags?: string[];
+            location?: { lat: number; lng: number } | null;
+        }
     ) {
         try {
             await updateDestination(tripId, id, payload);

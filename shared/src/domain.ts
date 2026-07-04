@@ -50,6 +50,8 @@ export interface Destination {
     links: string[];
     tags: string[];
     comments: DestinationComment[];
+    /** Pinned map location (Feature 5), or null when no pin has been dropped. */
+    location: { lat: number; lng: number } | null;
     createdAt: string;
     updatedAt: string;
 }

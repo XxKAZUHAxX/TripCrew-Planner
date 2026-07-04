@@ -96,9 +96,8 @@ describe('destinations', () => {
         await api('POST', `/api/trips/join/${trip.inviteCode}`, { token: member.token });
         const base = `/api/trips/${trip._id}/destinations`;
 
-        const dest = (
-            await api('POST', base, { token: host.token, body: { name: 'Cebu' } })
-        ).data.destination;
+        const dest = (await api('POST', base, { token: host.token, body: { name: 'Cebu' } })).data
+            .destination;
         const dBase = `${base}/${dest._id}`;
 
         // A non-proposer member can add notes/links/tags; bad links are dropped.
@@ -133,7 +132,10 @@ describe('destinations', () => {
         });
         assert(comment.status === 201, 'member adds a comment');
         const c = comment.data.destination.comments[0];
-        assert(c.text === 'I vote for this!' && c.userId.name === 'Member', 'comment stored + author');
+        assert(
+            c.text === 'I vote for this!' && c.userId.name === 'Member',
+            'comment stored + author'
+        );
 
         // Host (creator) may delete anyone's comment; a non-author member may not.
         const other = await makeUser('Other', 'other-f4@example.com');
@@ -145,5 +147,38 @@ describe('destinations', () => {
             removed.status === 200 && removed.data.destination.comments.length === 0,
             'creator deletes comment'
         );
+    });
+
+    it('validates and stores a map pin location (F5)', async () => {
+        const { api } = h;
+        const reg = await api('POST', '/api/auth/register', {
+            body: { name: 'Pin', email: 'pin-f5@example.com', password: 'pw12345' },
+        });
+        const token = reg.data.token;
+        const trip = (await api('POST', '/api/trips', { token, body: { title: 'F5 Trip' } })).data
+            .trip;
+        const base = `/api/trips/${trip._id}/destinations`;
+        const dest = (await api('POST', base, { token, body: { name: 'Baguio' } })).data.destination;
+        const dBase = `${base}/${dest._id}`;
+
+        const bad = await api('PATCH', dBase, {
+            token,
+            body: { location: { lat: 200, lng: 0 } },
+        });
+        assert(bad.status === 400, 'out-of-range latitude rejected');
+
+        const ok = await api('PATCH', dBase, {
+            token,
+            body: { location: { lat: 16.4023, lng: 120.596 } },
+        });
+        assert(
+            ok.status === 200 &&
+                ok.data.destination.location.lat === 16.4023 &&
+                ok.data.destination.location.lng === 120.596,
+            'valid pin stored'
+        );
+
+        const cleared = await api('PATCH', dBase, { token, body: { location: null } });
+        assert(cleared.status === 200 && cleared.data.destination.location === null, 'pin cleared');
     });
 });

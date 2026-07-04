@@ -38,11 +38,7 @@ export async function deleteDestination(tripId: string, id: string): Promise<OkR
     return data;
 }
 
-export async function addComment(
-    tripId: string,
-    id: string,
-    text: string
-): Promise<Destination> {
+export async function addComment(tripId: string, id: string, text: string): Promise<Destination> {
     const { data } = await api.post<DestinationResponse>(
         `/trips/${tripId}/destinations/${id}/comments`,
         { text }

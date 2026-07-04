@@ -18,11 +18,13 @@ import { formatCost } from '@/utils/cost';
 import { refId } from '@/utils/refs';
 import { cn } from '@/lib/utils';
 import SafeMarkdown from './SafeMarkdown';
+import DestinationMap, { type LatLng } from './DestinationMap';
 
 interface DetailsPayload {
     notes?: string;
     links?: string[];
     tags?: string[];
+    location?: LatLng | null;
 }
 
 interface DestinationCardProps {
@@ -288,9 +290,7 @@ export default function DestinationCard({
                                 {destination.notes ? (
                                     <SafeMarkdown content={destination.notes} />
                                 ) : (
-                                    <p className="italic text-muted-foreground">
-                                        No notes yet.
-                                    </p>
+                                    <p className="italic text-muted-foreground">No notes yet.</p>
                                 )}
                             </div>
                             {destination.links.length > 0 && (
@@ -311,17 +311,38 @@ export default function DestinationCard({
                                 </ul>
                             )}
                             {canEditDetails && (
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={startEditDetails}
-                                >
+                                <Button size="sm" variant="outline" onClick={startEditDetails}>
                                     <Pencil className="size-3.5" />
                                     Edit details
                                 </Button>
                             )}
                         </div>
                     )}
+
+                    <div className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground">Location</p>
+                        <DestinationMap
+                            location={destination.location}
+                            editable={canEditDetails}
+                            onPick={
+                                canEditDetails && onUpdateDetails
+                                    ? (loc) => onUpdateDetails(destination._id, { location: loc })
+                                    : undefined
+                            }
+                        />
+                        {canEditDetails && destination.location && onUpdateDetails && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                    onUpdateDetails(destination._id, { location: null })
+                                }
+                            >
+                                <X className="size-3.5" />
+                                Clear pin
+                            </Button>
+                        )}
+                    </div>
 
                     <div className="space-y-2">
                         <p className="text-xs font-semibold text-muted-foreground">

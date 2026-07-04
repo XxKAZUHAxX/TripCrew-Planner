@@ -11,6 +11,7 @@ import {
     deleteTask,
 } from '@/api/playbook.api';
 import { getTrip, updatePlaybookEditors } from '@/api/trips.api';
+import { updateDestination } from '@/api/destinations.api';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/errors';
 import { refId } from '@/utils/refs';
@@ -22,6 +23,7 @@ import { PageLoader } from '@/components/ui/spinner';
 import SafeMarkdown from '@/components/SafeMarkdown';
 import MarkdownEditor from '@/components/MarkdownEditor';
 import Checklist from '@/components/Checklist';
+import DestinationMap, { type LatLng } from '@/components/DestinationMap';
 
 export default function PlaybookPage() {
     const { tripId } = useParams() as { tripId: string };
@@ -77,6 +79,17 @@ export default function PlaybookPage() {
             toast.success('Instructions saved.');
         } catch (err) {
             toast.error(getErrorMessage(err, 'Failed to save instructions'));
+        }
+    }
+
+    async function handleUpdateLocation(loc: LatLng | null) {
+        if (!winningDest) return;
+        try {
+            const updated = await updateDestination(tripId, winningDest._id, { location: loc });
+            setWinningDest(updated);
+            toast.success('Location updated.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to update location'));
         }
     }
 
@@ -165,6 +178,31 @@ export default function PlaybookPage() {
                         Destination decided: <strong>{winningDest.name}</strong>
                     </span>
                 </div>
+            )}
+
+            {winningDest && (
+                <Card className="mb-4">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Where we&apos;re going</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <DestinationMap
+                            location={winningDest.location}
+                            editable={canEdit}
+                            onPick={canEdit ? handleUpdateLocation : undefined}
+                        />
+                        {canEdit && winningDest.location && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="mt-2"
+                                onClick={() => handleUpdateLocation(null)}
+                            >
+                                Clear pin
+                            </Button>
+                        )}
+                    </CardContent>
+                </Card>
             )}
 
             <Card className="mb-4">

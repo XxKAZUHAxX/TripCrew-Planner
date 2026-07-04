@@ -21,6 +21,8 @@ export interface IDestination {
     links: string[];
     tags: string[];
     comments: Types.DocumentArray<IDestinationComment>;
+    // Pinned map location (Feature 5); null until someone drops a pin.
+    location: { lat: number; lng: number } | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -31,6 +33,14 @@ const commentSchema = new Schema<IDestinationComment>(
         text: { type: String, required: true, trim: true },
     },
     { timestamps: true }
+);
+
+const locationSchema = new Schema<{ lat: number; lng: number }>(
+    {
+        lat: { type: Number, required: true, min: -90, max: 90 },
+        lng: { type: Number, required: true, min: -180, max: 180 },
+    },
+    { _id: false }
 );
 
 const destinationSchema = new Schema<IDestination>(
@@ -44,6 +54,7 @@ const destinationSchema = new Schema<IDestination>(
         links: { type: [String], default: [] },
         tags: { type: [String], default: [] },
         comments: { type: [commentSchema], default: [] },
+        location: { type: locationSchema, default: null },
     },
     { timestamps: true }
 );

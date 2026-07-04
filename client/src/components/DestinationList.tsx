@@ -20,7 +20,12 @@ interface DestinationListProps {
     onUpdateCost: (id: string, estimatedCost: number | null) => void | Promise<void>;
     onUpdateDetails: (
         id: string,
-        payload: { notes?: string; links?: string[]; tags?: string[] }
+        payload: {
+            notes?: string;
+            links?: string[];
+            tags?: string[];
+            location?: { lat: number; lng: number } | null;
+        }
     ) => void | Promise<void>;
     onAddComment: (id: string, text: string) => void | Promise<void>;
     onDeleteComment: (id: string, commentId: string) => void | Promise<void>;

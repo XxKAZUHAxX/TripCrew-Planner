@@ -126,12 +126,13 @@ export interface ProposeDestinationRequest {
     estimatedCost?: number | null;
 }
 
-/** Edit a destination's mutable fields (Features 7 & 4). */
+/** Edit a destination's mutable fields (Features 7, 4 & 5). */
 export interface UpdateDestinationRequest {
     estimatedCost?: number | null;
     notes?: string;
     links?: string[];
     tags?: string[];
+    location?: { lat: number; lng: number } | null;
 }
 
 /** Add a comment to a destination (Feature 4). */
