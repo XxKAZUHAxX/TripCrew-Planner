@@ -15,7 +15,9 @@ export function createApp(): Application {
 
     app.use(
         cors({
-            origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+            // Browser Origin headers never include a trailing slash, so strip one
+            // from CLIENT_ORIGIN to avoid an exact-match CORS failure in production.
+            origin: (process.env.CLIENT_ORIGIN || 'http://localhost:5173').replace(/\/$/, ''),
             credentials: true,
         })
     );

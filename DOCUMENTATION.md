@@ -1044,7 +1044,13 @@ git push -u origin main
 
 5. Click **Deploy site**. Netlify gives you a URL like `https://tripcrew-abc123.netlify.app`.
 
-    > Netlify automatically serves `index.html` for unknown routes (SPA fallback), so React Router works without extra configuration.
+    > **SPA fallback is required.** React Router uses client-side routes, so refreshing or directly opening a deep link (e.g. `/trips/<id>` or `/join/<code>`) must serve `index.html` instead of returning a 404. This repo ships `client/public/_redirects` containing:
+    >
+    > ```
+    > /*    /index.html   200
+    > ```
+    >
+    > Vite copies `client/public/` into `client/dist/` on build, so the rule deploys automatically — no Netlify configuration needed. Do not rely on Netlify's automatic pretty-URL handling; it is not reliable for a client-side router.
 
 #### A4. Wire them together
 
@@ -1129,7 +1135,7 @@ Fly prints your app URL: `https://tripcrew-api.fly.dev`.
 
 #### B4. Deploy the frontend on Netlify
 
-Follow **Option A steps A1 and A3**, setting `VITE_API_BASE_URL` to `https://tripcrew-api.fly.dev/api`.
+Follow **Option A steps A1 and A3** (including the required `client/public/_redirects` SPA fallback described there), setting `VITE_API_BASE_URL` to `https://tripcrew-api.fly.dev/api`.
 
 ---
 
