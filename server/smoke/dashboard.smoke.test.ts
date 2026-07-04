@@ -92,4 +92,46 @@ describe('dashboard', () => {
         assert(dash3.data.deadlock.eligible === true, 'wheel eligible on tie');
         assert(dash3.data.deadlock.slices.length === 2, 'tie produces 2 slices');
     });
+
+    it('surfaces opted-out members and excludes them from the Ghost badge (Feature 1)', async () => {
+        const { api } = h;
+
+        async function makeUser(
+            name: string,
+            email: string
+        ): Promise<{ token: string; id: string }> {
+            const r = await api('POST', '/api/auth/register', {
+                body: { name, email, password: 'pw12345' },
+            });
+            return { token: r.data.token, id: r.data.user.id };
+        }
+
+        const host = await makeUser('Holly', 'holly@example.com');
+        const quitter = await makeUser('Quinn', 'quinn@example.com');
+
+        // Deadline <24h so a non-voter would normally earn "The Ghost".
+        const deadline = new Date(Date.now() + 12 * 3600 * 1000).toISOString();
+        const trip = (
+            await api('POST', '/api/trips', {
+                token: host.token,
+                body: { title: 'Opt Dash', votingDeadline: deadline },
+            })
+        ).data.trip;
+        await api('POST', `/api/trips/join/${trip.inviteCode}`, { token: quitter.token });
+        const tBase = `/api/trips/${trip._id}`;
+
+        // Quinn opts out without voting.
+        await api('POST', `${tBase}/availability/opt-out`, { token: quitter.token });
+
+        const dash = await api('GET', `${tBase}/dashboard`, { token: host.token });
+        assert(
+            dash.data.optedOutMemberIds.includes(quitter.id),
+            'dashboard reports opted-out member'
+        );
+        const quinnBadges = dash.data.badges[quitter.id] || [];
+        assert(
+            !quinnBadges.includes('The Ghost'),
+            'opted-out member does not earn The Ghost'
+        );
+    });
 });

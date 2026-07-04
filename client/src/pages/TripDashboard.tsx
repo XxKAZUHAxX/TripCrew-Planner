@@ -337,6 +337,7 @@ export default function TripDashboard() {
                         badges={dashboard?.badges}
                         definitions={dashboard?.definitions}
                         votedMemberIds={dashboard?.votedMemberIds}
+                        optedOutMemberIds={dashboard?.optedOutMemberIds}
                     />
                     <Card>
                         <CardHeader className="pb-3">

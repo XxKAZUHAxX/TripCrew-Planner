@@ -12,6 +12,12 @@ import type { IDestination } from '../models/Destination.js';
 
 export interface DeadlockTripInput {
     memberCount: number;
+    /**
+     * Members eligible for turnout/quorum after excluding opted-out and (post
+     * availability-deadline) non-responders. Falls back to memberCount when
+     * omitted (Feature 1).
+     */
+    effectiveMemberCount?: number;
     votingDeadline: Date | null;
 }
 
@@ -40,7 +46,10 @@ export function evaluateDeadlock(
     const tie = Boolean(first && second && first.score > 0 && first.score === second.score);
 
     const deadlinePassed = trip.votingDeadline ? now >= new Date(trip.votingDeadline) : false;
-    const lowTurnout = memberCount > 0 ? voterCount / memberCount < 0.5 : true;
+    // Quorum is measured against the effective (participating) member count so
+    // opted-out / non-responding members can't hold the trip hostage.
+    const quorumBase = trip.effectiveMemberCount ?? memberCount;
+    const lowTurnout = quorumBase > 0 ? voterCount / quorumBase < 0.5 : true;
     const timeout = deadlinePassed && lowTurnout;
 
     const eligible = Boolean(tie || timeout);

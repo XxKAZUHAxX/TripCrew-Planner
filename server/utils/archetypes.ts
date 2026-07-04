@@ -37,6 +37,8 @@ export interface ArchetypeInput {
     destinations: ArchetypeDestination[];
     votes: ArchetypeVote[];
     votingDeadline: Date | null;
+    /** Members who opted out — never earn "The Ghost" (Feature 1). */
+    optedOutIds?: string[];
     now?: Date;
 }
 
@@ -45,10 +47,12 @@ export function computeArchetypes({
     destinations,
     votes,
     votingDeadline,
+    optedOutIds = [],
     now = new Date(),
 }: ArchetypeInput): BadgeMap {
     const voteByUser = new Map<string, ArchetypeVote>();
     for (const v of votes) voteByUser.set(String(v.userId), v);
+    const optedOut = new Set(optedOutIds.map(String));
 
     // Earliest voter (Hype Machine).
     let firstVoterId: string | null = null;
@@ -77,7 +81,7 @@ export function computeArchetypes({
         if (myProposals.length > 5) badges.push('The Dictator');
 
         // The Ghost
-        if (!myVote && deadlineWithin24h) badges.push('The Ghost');
+        if (!myVote && deadlineWithin24h && !optedOut.has(uid)) badges.push('The Ghost');
 
         // The Accountant
         if (myProposals.length >= 2 && myProposals.every((d) => d.budgetTier === 'low')) {

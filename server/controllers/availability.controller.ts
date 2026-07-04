@@ -22,7 +22,24 @@ export async function saveAvailability(
         const unique = [...new Set<string>(dates)].sort();
         const availability = await Availability.findOneAndUpdate(
             { tripId: req.trip._id, userId: req.user.id },
-            { $set: { dates: unique } },
+            // Saving dates re-engages a member, clearing any prior opt-out.
+            { $set: { dates: unique, status: 'submitted' } },
+            { new: true, upsert: true }
+        );
+        res.json({ availability });
+    } catch (err) {
+        next(err);
+    }
+}
+
+// Opt out of this trip's scheduling: the member stays in trip.members (still
+// sees the trip) but is flagged so the group sees it and quorum excludes them.
+// Re-saving availability (PUT /) reverses this by resetting status to submitted.
+export async function optOut(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const availability = await Availability.findOneAndUpdate(
+            { tripId: req.trip._id, userId: req.user.id },
+            { $set: { dates: [], status: 'opted_out' } },
             { new: true, upsert: true }
         );
         res.json({ availability });
@@ -38,7 +55,7 @@ export async function getMyAvailability(
 ): Promise<void> {
     try {
         const doc = await Availability.findOne({ tripId: req.trip._id, userId: req.user.id });
-        res.json({ dates: doc ? doc.dates : [] });
+        res.json({ dates: doc ? doc.dates : [], status: doc ? doc.status : 'pending' });
     } catch (err) {
         next(err);
     }

@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Users, CalendarClock } from 'lucide-react';
-import type { AvailabilitySummaryEntry, Heatmap } from '@tripcrew/shared';
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Users, CalendarClock, UserX } from 'lucide-react';
+import type { AvailabilitySummaryEntry, AvailabilityStatus, Heatmap } from '@tripcrew/shared';
 import {
     getMyAvailability,
     saveAvailability,
     getHeatmap,
     getAvailabilitySummary,
+    optOutOfTrip,
 } from '@/api/availability.api';
 import { getTrip, updateTrip } from '@/api/trips.api';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,6 +20,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageLoader } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
 import DeadlineBadge from '@/components/DeadlineBadge';
@@ -58,6 +60,11 @@ export default function AvailabilityPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Opt-out state (Feature 1).
+    const [status, setStatus] = useState<AvailabilityStatus>('pending');
+    const [optOutOpen, setOptOutOpen] = useState(false);
+    const [optingOut, setOptingOut] = useState(false);
+
     // Availability deadline (Feature 10) — host-settable, must be >= votingDeadline.
     const [isHost, setIsHost] = useState(false);
     const [votingDeadline, setVotingDeadline] = useState<string | null>(null);
@@ -77,12 +84,13 @@ export default function AvailabilityPage() {
 
     const loadData = useCallback(async () => {
         try {
-            const [dates, detail] = await Promise.all([
+            const [mine, detail] = await Promise.all([
                 getMyAvailability(tripId),
                 getTrip(tripId),
                 refreshGroupData(),
             ]);
-            setMyDates(new Set(dates));
+            setMyDates(new Set(mine.dates));
+            setStatus(mine.status);
             setIsHost(refId(detail.trip.creator) === user?.id);
             setVotingDeadline(detail.trip.votingDeadline);
             setAvailabilityDeadline(detail.trip.availabilityDeadline);
@@ -145,6 +153,33 @@ export default function AvailabilityPage() {
         }
     }
 
+    async function handleOptOut() {
+        setOptingOut(true);
+        try {
+            await optOutOfTrip(tripId);
+            setStatus('opted_out');
+            setMyDates(new Set());
+            await refreshGroupData();
+            toast.success('You have opted out of this trip.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to opt out'));
+        } finally {
+            setOptingOut(false);
+            setOptOutOpen(false);
+        }
+    }
+
+    async function handleRejoin() {
+        try {
+            await saveAvailability(tripId, [...myDates].sort());
+            setStatus('submitted');
+            await refreshGroupData();
+            toast.success('Welcome back — you have rejoined the trip.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to rejoin'));
+        }
+    }
+
     async function handleSaveDeadline() {
         const iso = deadlineInput ? new Date(deadlineInput).toISOString() : null;
         // Mirror the server rule: availability deadline must be >= voting deadline.
@@ -173,24 +208,51 @@ export default function AvailabilityPage() {
         <div className="mx-auto max-w-3xl px-4 py-8">
             <div className="mb-4 flex items-center justify-between gap-3">
                 <h1 className="text-2xl font-bold">When are you free?</h1>
-                <Link
-                    className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
-                    to={`/trips/${tripId}`}
-                >
-                    <ArrowLeft className="size-4" />
-                    Back
-                </Link>
+                <div className="flex items-center gap-2">
+                    {status !== 'opted_out' && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => setOptOutOpen(true)}
+                        >
+                            <UserX className="size-4" />
+                            <span className="hidden sm:inline">Opt out</span>
+                        </Button>
+                    )}
+                    <Link
+                        className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+                        to={`/trips/${tripId}`}
+                    >
+                        <ArrowLeft className="size-4" />
+                        Back
+                    </Link>
+                </div>
             </div>
             {error && (
                 <Alert variant="destructive" className="mb-4">
                     <AlertDescription>{error}</AlertDescription>
                 </Alert>
             )}
-            <p className="mb-4 text-sm text-muted-foreground">
-                Tap or drag to mark your available dates. Colors show group overlap. Changes save
-                automatically when you finish.
-                {saving && <span className="ml-2 text-foreground">Saving…</span>}
-            </p>
+            {status === 'opted_out' ? (
+                <Alert className="mb-4">
+                    <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <span>
+                            You&apos;ve opted out of this trip. The group can see you&apos;re not
+                            joining, and scheduling proceeds without you.
+                        </span>
+                        <Button variant="outline" size="sm" onClick={handleRejoin}>
+                            Rejoin trip
+                        </Button>
+                    </AlertDescription>
+                </Alert>
+            ) : (
+                <p className="mb-4 text-sm text-muted-foreground">
+                    Tap or drag to mark your available dates. Colors show group overlap. Changes save
+                    automatically when you finish.
+                    {saving && <span className="ml-2 text-foreground">Saving…</span>}
+                </p>
+            )}
             <Card className="mb-4">
                 <CardContent className="pt-5">
                     <div className="flex items-center gap-2">
@@ -317,6 +379,14 @@ export default function AvailabilityPage() {
                     )}
                 </CardContent>
             </Card>
+            <ConfirmDialog
+                open={optOutOpen}
+                onOpenChange={setOptOutOpen}
+                title="Opt out of this trip?"
+                description="You'll be marked as not joining so the group can plan without you. You can rejoin anytime by marking your availability again."
+                confirmLabel={optingOut ? 'Opting out…' : 'Opt out'}
+                onConfirm={handleOptOut}
+            />
         </div>
     );
 }
