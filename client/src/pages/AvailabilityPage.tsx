@@ -1,8 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Users, CalendarClock, UserX } from 'lucide-react';
-import type { AvailabilitySummaryEntry, AvailabilityStatus, Heatmap } from '@tripcrew/shared';
+import type {
+    AvailabilityMember,
+    AvailabilitySummaryEntry,
+    AvailabilityStatus,
+    Heatmap,
+} from '@tripcrew/shared';
 import {
     getMyAvailability,
     saveAvailability,
@@ -74,6 +79,16 @@ export default function AvailabilityPage() {
 
     const dragRef = useRef<{ active: boolean; mode: DragMode }>({ active: false, mode: 'add' });
     const { year, monthIndex } = monthRefFromOffset(monthOffset);
+
+    // Date key → members available, so calendar cells can show who's free.
+    const membersByDate = useMemo(() => {
+        const map: Record<string, AvailabilityMember[]> = {};
+        for (const entry of summary) map[entry.date] = entry.members;
+        return map;
+    }, [summary]);
+
+    // The "best dates" panel only ever surfaces the strongest few overlaps.
+    const topDates = summary.slice(0, 3);
 
     const refreshGroupData = useCallback(async () => {
         const [heat, sum] = await Promise.all([getHeatmap(tripId), getAvailabilitySummary(tripId)]);
@@ -324,6 +339,7 @@ export default function AvailabilityPage() {
                         heatmap={heatmap}
                         myDates={myDates}
                         totalMembers={memberCount}
+                        membersByDate={membersByDate}
                         onPointerDown={handlePointerDown}
                         onPointerEnter={handlePointerEnter}
                     />
@@ -348,12 +364,12 @@ export default function AvailabilityPage() {
                     </button>
                     {summaryOpen && (
                         <div className="mt-3 space-y-1.5">
-                            {summary.length === 0 ? (
+                            {topDates.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">
                                     No availability marked yet.
                                 </p>
                             ) : (
-                                summary.map((entry) => (
+                                topDates.map((entry) => (
                                     <Tooltip
                                         key={entry.date}
                                         content={entry.members.map((m) => m.name).join(', ')}
