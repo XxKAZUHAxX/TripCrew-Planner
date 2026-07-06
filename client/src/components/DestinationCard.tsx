@@ -1,31 +1,50 @@
 import { useState } from 'react';
-import { Trash2 } from 'lucide-react';
-import type { BudgetTier, Destination } from '@tripcrew/shared';
-import { Badge, type BadgeProps } from '@/components/ui/badge';
+import { Trash2, Pencil, Check, X } from 'lucide-react';
+import type { Destination } from '@tripcrew/shared';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
+import { Input } from '@/components/ui/input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { BUDGET_META, budgetBadgeLabel } from '@/utils/budget';
-
-const TIER_VARIANT: Record<BudgetTier, BadgeProps['variant']> = {
-    low: 'success',
-    medium: 'warning',
-    high: 'destructive',
-};
+import { formatCost } from '@/utils/cost';
 
 interface DestinationCardProps {
     destination: Destination;
     canDelete: boolean;
+    canEdit?: boolean;
     onDelete: (id: string) => void | Promise<void>;
+    onUpdateCost?: (id: string, estimatedCost: number | null) => void | Promise<void>;
 }
 
 export default function DestinationCard({
     destination,
     canDelete,
+    canEdit = false,
     onDelete,
+    onUpdateCost,
 }: DestinationCardProps) {
     const [confirmOpen, setConfirmOpen] = useState(false);
-    const tier = destination.budgetTier;
+    const [editing, setEditing] = useState(false);
+    const [costInput, setCostInput] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    function startEdit() {
+        setCostInput(destination.estimatedCost == null ? '' : String(destination.estimatedCost));
+        setEditing(true);
+    }
+
+    async function saveCost() {
+        if (!onUpdateCost) return;
+        const trimmed = costInput.trim();
+        const value = trimmed === '' ? null : Number(trimmed);
+        if (value !== null && (!Number.isFinite(value) || value < 0)) return;
+        setSaving(true);
+        try {
+            await onUpdateCost(destination._id, value);
+            setEditing(false);
+        } finally {
+            setSaving(false);
+        }
+    }
 
     return (
         <div className="rounded-lg border bg-card p-3 transition-colors hover:border-primary/40">
@@ -37,14 +56,64 @@ export default function DestinationCard({
                             {destination.description}
                         </p>
                     )}
-                    <Tooltip content={`${BUDGET_META[tier].label}: ${BUDGET_META[tier].range}`}>
-                        <Badge
-                            variant={TIER_VARIANT[tier] || 'secondary'}
-                            className="mt-2 cursor-help"
-                        >
-                            {budgetBadgeLabel(tier)}
-                        </Badge>
-                    </Tooltip>
+                    <div className="mt-2 flex items-center gap-2">
+                        {editing ? (
+                            <div className="flex items-center gap-1">
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    step="any"
+                                    inputMode="numeric"
+                                    className="h-8 w-32"
+                                    placeholder="No estimate"
+                                    value={costInput}
+                                    onChange={(e) => setCostInput(e.target.value)}
+                                    autoFocus
+                                />
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8 text-success"
+                                    onClick={saveCost}
+                                    disabled={saving}
+                                    aria-label="Save cost"
+                                >
+                                    <Check className="size-4" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8 text-muted-foreground"
+                                    onClick={() => setEditing(false)}
+                                    disabled={saving}
+                                    aria-label="Cancel edit"
+                                >
+                                    <X className="size-4" />
+                                </Button>
+                            </div>
+                        ) : (
+                            <>
+                                <Badge
+                                    variant={
+                                        destination.estimatedCost == null ? 'muted' : 'secondary'
+                                    }
+                                >
+                                    {formatCost(destination.estimatedCost)}
+                                </Badge>
+                                {canEdit && onUpdateCost && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-7 text-muted-foreground hover:text-foreground"
+                                        onClick={startEdit}
+                                        aria-label="Edit estimated cost"
+                                    >
+                                        <Pencil className="size-3.5" />
+                                    </Button>
+                                )}
+                            </>
+                        )}
+                    </div>
                 </div>
                 {canDelete && (
                     <Button

@@ -41,7 +41,7 @@ export function rankByScore(votes: VoteDoc[], destinations: DestinationDoc[]): S
         .map((d) => ({
             destId: d._id.toString(),
             name: d.name,
-            budgetTier: d.budgetTier,
+            estimatedCost: d.estimatedCost,
             score: scores.get(d._id.toString()) ?? 0,
         }))
         .sort((a, b) => b.score - a.score);

@@ -37,17 +37,17 @@ describe('dashboard', () => {
         await api('POST', `/api/trips/join/${trip.inviteCode}`, { token: bob.token });
         const tBase = `/api/trips/${trip._id}`;
 
-        // Alice proposes two low-budget destinations -> Accountant qualifier.
+        // Alice proposes two destinations.
         const t = (
             await api('POST', `${tBase}/destinations`, {
                 token: alice.token,
-                body: { name: 'Tokyo', budgetTier: 'low' },
+                body: { name: 'Tokyo', estimatedCost: 8000 },
             })
         ).data.destination;
         const b = (
             await api('POST', `${tBase}/destinations`, {
                 token: alice.token,
-                body: { name: 'Bali', budgetTier: 'low' },
+                body: { name: 'Bali', estimatedCost: 3000 },
             })
         ).data.destination;
 
@@ -63,7 +63,6 @@ describe('dashboard', () => {
 
         const aliceBadges = dash.data.badges[alice.id];
         const bobBadges = dash.data.badges[bob.id];
-        assert(aliceBadges.includes('The Accountant'), 'Alice is The Accountant (2 low proposals)');
         assert(aliceBadges.includes('The Hype Machine'), 'Alice is The Hype Machine (first voter)');
         assert(bobBadges.includes('The Ghost'), 'Bob is The Ghost (no vote, deadline <24h)');
 

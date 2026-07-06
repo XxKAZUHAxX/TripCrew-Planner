@@ -10,7 +10,6 @@ export type { ArchetypeName };
 export const ARCHETYPES: ArchetypeDefinitions = {
     'The Dictator': 'Has proposed more than 5 destinations for this trip.',
     'The Ghost': 'Has cast zero votes with the deadline looming (<24h).',
-    'The Accountant': 'Every destination they proposed is budget-tier "low".',
     'The Overthinker': 'Has changed their vote ranking more than 3 times.',
     'The Hype Machine': 'Was the first to cast a vote for this trip.',
 };
@@ -23,7 +22,6 @@ interface ArchetypeMember {
 
 interface ArchetypeDestination {
     proposedBy: IdLike;
-    budgetTier: string;
 }
 
 interface ArchetypeVote {
@@ -82,11 +80,6 @@ export function computeArchetypes({
 
         // The Ghost
         if (!myVote && deadlineWithin24h && !optedOut.has(uid)) badges.push('The Ghost');
-
-        // The Accountant
-        if (myProposals.length >= 2 && myProposals.every((d) => d.budgetTier === 'low')) {
-            badges.push('The Accountant');
-        }
 
         // The Overthinker
         if (myVote && myVote.changeCount > 3) badges.push('The Overthinker');

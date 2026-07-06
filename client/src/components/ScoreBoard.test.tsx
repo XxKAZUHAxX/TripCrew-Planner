@@ -11,8 +11,8 @@ describe('ScoreBoard', () => {
 
     it('renders each destination name and score', () => {
         const scores: ScoredDestination[] = [
-            { destId: '1', name: 'Tokyo', budgetTier: 'high', score: 5 },
-            { destId: '2', name: 'Bali', budgetTier: 'low', score: 3 },
+            { destId: '1', name: 'Tokyo', estimatedCost: 5000, score: 5 },
+            { destId: '2', name: 'Bali', estimatedCost: null, score: 3 },
         ];
         render(<ScoreBoard scores={scores} />);
         expect(screen.getByText('Tokyo')).toBeInTheDocument();
