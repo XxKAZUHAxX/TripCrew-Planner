@@ -19,6 +19,11 @@ export default function Login() {
         <div className="mx-auto flex max-w-md flex-col items-center px-4 py-16">
             <AuthForm mode="login" onSubmit={handleSubmit} />
             <p className="mt-4 text-sm text-muted-foreground">
+                <Link className="font-medium text-primary hover:underline" to="/reset-password">
+                    Forgot password?
+                </Link>
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
                 No account?{' '}
                 <Link className="font-medium text-primary hover:underline" to="/register">
                     Sign up

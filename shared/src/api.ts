@@ -40,6 +40,16 @@ export interface LoginRequest {
     password: string;
 }
 
+/**
+ * Passwordless-recovery identity check (Feature 3): no email is sent. The user
+ * proves ownership by matching the stored name + email exactly.
+ */
+export interface ResetPasswordRequest {
+    name: string;
+    email: string;
+    password: string;
+}
+
 export interface AuthResponse {
     token: string;
     user: User;
