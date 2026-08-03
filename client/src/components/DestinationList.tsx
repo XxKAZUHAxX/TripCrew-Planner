@@ -54,6 +54,13 @@ export default function DestinationList({
 
     const proposalsOpen = status === 'voting';
 
+    // Lowest-budget badge (Feature 3): only meaningful once at least two
+    // destinations have an estimate to compare.
+    const costs = destinations
+        .map((d) => d.estimatedCost)
+        .filter((c): c is number => c !== null);
+    const lowestCost = costs.length >= 2 ? Math.min(...costs) : null;
+
     async function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         if (!proposalsOpen) return;
@@ -140,6 +147,9 @@ export default function DestinationList({
                                 creatorId={creatorId}
                                 canDelete={canManage}
                                 canEdit={canManage}
+                                isLowestBudget={
+                                    lowestCost !== null && d.estimatedCost === lowestCost
+                                }
                                 onDelete={onDelete}
                                 onUpdateCost={onUpdateCost}
                                 onUpdateDetails={onUpdateDetails}

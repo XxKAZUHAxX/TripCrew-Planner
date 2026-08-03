@@ -9,6 +9,7 @@ import {
     ExternalLink,
     Send,
     ImagePlus,
+    PiggyBank,
 } from 'lucide-react';
 import type { Destination, UserRef } from '@tripcrew/shared';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,8 @@ interface DestinationCardProps {
     canDelete: boolean;
     /** Cost edit permission (proposer or trip creator). */
     canEdit?: boolean;
+    /** True when this destination has the lowest estimatedCost among the trip's proposals. */
+    isLowestBudget?: boolean;
     onDelete: (id: string) => void | Promise<void>;
     onUpdateCost?: (id: string, estimatedCost: number | null) => void | Promise<void>;
     onUpdateDetails?: (id: string, payload: DetailsPayload) => void | Promise<void>;
@@ -54,6 +57,7 @@ export default function DestinationCard({
     creatorId,
     canDelete,
     canEdit = false,
+    isLowestBudget = false,
     onDelete,
     onUpdateCost,
     onUpdateDetails,
@@ -209,6 +213,15 @@ export default function DestinationCard({
                                 >
                                     {formatCost(destination.estimatedCost)}
                                 </Badge>
+                                {isLowestBudget && (
+                                    <Badge
+                                        variant="success"
+                                        title={`Lowest proposed budget · ${authorName(destination.proposedBy)}`}
+                                    >
+                                        <PiggyBank className="size-3.5" />
+                                        Lowest budget
+                                    </Badge>
+                                )}
                                 {canEdit && onUpdateCost && (
                                     <Button
                                         variant="ghost"
