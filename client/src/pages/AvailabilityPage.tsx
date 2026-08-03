@@ -36,10 +36,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageLoader } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
 import DeadlineBadge from '@/components/DeadlineBadge';
 import CalendarGrid from '@/components/CalendarGrid';
 
 type DragMode = 'add' | 'remove';
+type InteractionMode = 'set' | 'navigate';
 
 // Convert an ISO timestamp to the value a <input type="datetime-local"> expects
 // (local time, no timezone suffix). Returns '' for null/invalid input.
@@ -72,6 +74,10 @@ export default function AvailabilityPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Vote vs. browse switch (Feature 3): 'set' toggles availability on tap/drag,
+    // 'navigate' only reveals who's free on a given date without changing votes.
+    const [interactionMode, setInteractionMode] = useState<InteractionMode>('set');
 
     // Opt-out state (Feature 1).
     const [status, setStatus] = useState<AvailabilityStatus>('pending');
@@ -271,8 +277,9 @@ export default function AvailabilityPage() {
                 </Alert>
             ) : (
                 <p className="mb-4 text-sm text-muted-foreground">
-                    Tap or drag to mark your available dates. Colors show group overlap. Changes
-                    save automatically when you finish.
+                    {interactionMode === 'set'
+                        ? 'Tap or drag to mark your available dates. Colors show group overlap. Changes save automatically when you finish.'
+                        : "Tap a date to see how many members are free and who they are. Switch to \"Mark dates\" to change your own availability."}
                     {saving && <span className="ml-2 text-foreground">Saving…</span>}
                 </p>
             )}
@@ -316,7 +323,7 @@ export default function AvailabilityPage() {
             </Card>
             <Card>
                 <CardContent className="pt-6">
-                    <div className="mb-4 flex items-center justify-between">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                         <Button
                             variant="outline"
                             size="icon"
@@ -341,6 +348,18 @@ export default function AvailabilityPage() {
                             <ChevronRight className="size-4" />
                         </Button>
                     </div>
+                    {status !== 'opted_out' && (
+                        <div className="mb-4 flex justify-center">
+                            <Switch
+                                checked={interactionMode === 'set'}
+                                onCheckedChange={(checked) =>
+                                    setInteractionMode(checked ? 'set' : 'navigate')
+                                }
+                                leftLabel="Browse"
+                                rightLabel="Mark dates"
+                            />
+                        </div>
+                    )}
                     <CalendarGrid
                         year={year}
                         monthIndex={monthIndex}
@@ -348,6 +367,7 @@ export default function AvailabilityPage() {
                         myDates={myDates}
                         totalMembers={memberCount}
                         membersByDate={membersByDate}
+                        mode={status === 'opted_out' ? 'navigate' : interactionMode}
                         onPointerDown={handlePointerDown}
                         onPointerEnter={handlePointerEnter}
                     />

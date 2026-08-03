@@ -11,6 +11,8 @@ interface CalendarGridProps {
     totalMembers?: number;
     /** Map of date key → members available on that date, for per-cell indicators. */
     membersByDate?: Record<string, AvailabilityMember[]>;
+    /** 'set' toggles votes on tap/drag; 'navigate' only reveals info. */
+    mode?: 'set' | 'navigate';
     onPointerDown: (key: string) => void;
     onPointerEnter: (key: string) => void;
 }
@@ -22,6 +24,7 @@ export default function CalendarGrid({
     myDates,
     totalMembers,
     membersByDate,
+    mode = 'set',
     onPointerDown,
     onPointerEnter,
 }: CalendarGridProps) {
@@ -49,6 +52,7 @@ export default function CalendarGrid({
                         selected={cell ? myDates.has(cell.key) : false}
                         totalMembers={totalMembers}
                         members={cell ? membersByDate?.[cell.key] : undefined}
+                        mode={mode}
                         onPointerDown={onPointerDown}
                         onPointerEnter={onPointerEnter}
                     />

@@ -12,6 +12,11 @@ interface DateCellProps {
     totalMembers?: number;
     /** Members available on this date (drives the who's-available indicator). */
     members?: AvailabilityMember[];
+    /**
+     * 'set' = tap/drag toggles the user's availability (default).
+     * 'navigate' = tap only reveals who's available; no voting happens.
+     */
+    mode?: 'set' | 'navigate';
     onPointerDown: (key: string) => void;
     onPointerEnter: (key: string) => void;
 }
@@ -28,6 +33,7 @@ export default function DateCell({
     selected,
     totalMembers,
     members = [],
+    mode = 'set',
     onPointerDown,
     onPointerEnter,
 }: DateCellProps) {
@@ -40,6 +46,7 @@ export default function DateCell({
 
     const bg = countToColor(count || 0, totalMembers);
     const hasMembers = members.length > 0;
+    const isNavigate = mode === 'navigate';
 
     return (
         <div className="group/cell relative">
@@ -56,11 +63,21 @@ export default function DateCell({
                 onPointerDown={(e) => {
                     // Prevent scroll/text-selection interfering with touch drag-select.
                     e.preventDefault();
+                    if (isNavigate) {
+                        setOpen((v) => !v);
+                        return;
+                    }
                     onPointerDown(cell.key);
                 }}
-                onPointerEnter={() => onPointerEnter(cell.key)}
+                onPointerEnter={() => {
+                    if (isNavigate) return;
+                    onPointerEnter(cell.key);
+                }}
+                onBlur={() => {
+                    if (isNavigate) setOpen(false);
+                }}
                 title={`${cell.key} · ${count || 0} available`}
-                aria-pressed={selected}
+                aria-pressed={isNavigate ? undefined : selected}
             >
                 <span className="leading-none">{cell.day}</span>
                 {hasMembers && (
@@ -75,10 +92,12 @@ export default function DateCell({
                     </span>
                 )}
             </button>
-            {hasMembers && (
+            {!isNavigate && hasMembers && (
                 <>
                     {/* Corner toggle: reveals the member list on tap/click without
-                        triggering the drag-select on the underlying date button. */}
+                        triggering the drag-select on the underlying date button.
+                        Only needed in 'set' mode — in 'navigate' mode the whole
+                        cell already opens this panel. */}
                     <button
                         type="button"
                         aria-label={`Show who's available on ${cell.key}`}
@@ -112,6 +131,28 @@ export default function DateCell({
                         </ul>
                     </div>
                 </>
+            )}
+            {isNavigate && (
+                <div
+                    role="tooltip"
+                    className={cn(
+                        'absolute bottom-full left-1/2 z-50 mb-1 w-max max-w-[11rem] -translate-x-1/2',
+                        'rounded-md border border-border bg-popover px-2 py-1.5 text-left',
+                        'text-[0.7rem] leading-tight text-popover-foreground shadow-md',
+                        open ? 'block' : 'hidden'
+                    )}
+                >
+                    <p className="mb-0.5 font-semibold">{members.length} available</p>
+                    {hasMembers ? (
+                        <ul className="space-y-0.5">
+                            {members.map((m) => (
+                                <li key={m.id}>{m.name}</li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="italic text-muted-foreground">No one yet.</p>
+                    )}
+                </div>
             )}
         </div>
     );
