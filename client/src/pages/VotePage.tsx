@@ -16,6 +16,7 @@ import { PageLoader } from '@/components/ui/spinner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { InfoTooltip } from '@/components/ui/tooltip';
 import RankableList from '@/components/RankableList';
+import DestinationDetailsModal from '@/components/DestinationDetailsModal';
 import ScoreBoard from '@/components/ScoreBoard';
 import DeadlineBadge from '@/components/DeadlineBadge';
 
@@ -32,6 +33,7 @@ export default function VotePage() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [detailsId, setDetailsId] = useState<string | null>(null);
 
     useEffect(() => {
         let active = true;
@@ -69,6 +71,10 @@ export default function VotePage() {
     const ranked = rankedIds.map((id) => destMap[id]).filter((d): d is Destination => Boolean(d));
     const unranked = destinations.filter((d) => !rankedIds.includes(d._id));
     const isDecided = status === 'decided';
+
+    // Lowest-budget badge (Feature 3), mirrors the dashboard destination list rule.
+    const costs = destinations.map((d) => d.estimatedCost).filter((c): c is number => c !== null);
+    const lowestCost = costs.length >= 2 ? Math.min(...costs) : null;
 
     async function saveVote() {
         setSaving(true);
@@ -156,6 +162,7 @@ export default function VotePage() {
                             unranked={unranked}
                             onRankingChange={setRankedIds}
                             readOnly={isDecided}
+                            onViewDetails={setDetailsId}
                         />
                     )}
                     {!isDecided && (
@@ -192,6 +199,16 @@ export default function VotePage() {
                 confirmLabel="Save anyway"
                 confirmVariant="default"
                 onConfirm={saveVote}
+            />
+
+            <DestinationDetailsModal
+                destination={detailsId ? (destMap[detailsId] ?? null) : null}
+                onClose={() => setDetailsId(null)}
+                isLowestBudget={
+                    detailsId != null &&
+                    lowestCost !== null &&
+                    destMap[detailsId]?.estimatedCost === lowestCost
+                }
             />
         </div>
     );

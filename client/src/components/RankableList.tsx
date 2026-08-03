@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // Drag-to-rank list — no external library needed; pure React state.
@@ -13,6 +13,8 @@ interface RankableListProps {
     onRankingChange: (orderedIds: string[]) => void;
     /** Read-only mode hides the reorder / add / remove controls (Issue 6). */
     readOnly?: boolean;
+    /** When provided, renders a "Details" button per item that opens the destination's info window (Feature 4). */
+    onViewDetails?: (id: string) => void;
 }
 
 export default function RankableList({
@@ -20,6 +22,7 @@ export default function RankableList({
     unranked,
     onRankingChange,
     readOnly = false,
+    onViewDetails,
 }: RankableListProps) {
     function moveUp(index: number) {
         if (index === 0) return;
@@ -68,39 +71,52 @@ export default function RankableList({
                                     </span>
                                     {d.name}
                                 </span>
-                                {!readOnly && (
-                                    <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1">
+                                    {onViewDetails && (
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="size-7"
-                                            onClick={() => moveUp(i)}
-                                            disabled={i === 0}
-                                            aria-label="Move up"
+                                            className="size-7 text-muted-foreground"
+                                            onClick={() => onViewDetails(d._id)}
+                                            aria-label={`View details for ${d.name}`}
                                         >
-                                            <ChevronUp className="size-4" />
+                                            <Info className="size-4" />
                                         </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="size-7"
-                                            onClick={() => moveDown(i)}
-                                            disabled={i === ranked.length - 1}
-                                            aria-label="Move down"
-                                        >
-                                            <ChevronDown className="size-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="size-7 text-muted-foreground hover:text-destructive"
-                                            onClick={() => removeFromRanked(d)}
-                                            aria-label="Remove"
-                                        >
-                                            <X className="size-4" />
-                                        </Button>
-                                    </div>
-                                )}
+                                    )}
+                                    {!readOnly && (
+                                        <>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-7"
+                                                onClick={() => moveUp(i)}
+                                                disabled={i === 0}
+                                                aria-label="Move up"
+                                            >
+                                                <ChevronUp className="size-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-7"
+                                                onClick={() => moveDown(i)}
+                                                disabled={i === ranked.length - 1}
+                                                aria-label="Move down"
+                                            >
+                                                <ChevronDown className="size-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-7 text-muted-foreground hover:text-destructive"
+                                                onClick={() => removeFromRanked(d)}
+                                                aria-label="Remove"
+                                            >
+                                                <X className="size-4" />
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
                             </li>
                         ))}
                     </ol>
@@ -118,9 +134,26 @@ export default function RankableList({
                                 className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2"
                             >
                                 <span>{d.name}</span>
-                                <Button variant="outline" size="sm" onClick={() => addToRanked(d)}>
-                                    Add to ranking
-                                </Button>
+                                <div className="flex items-center gap-1.5">
+                                    {onViewDetails && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="size-7 text-muted-foreground"
+                                            onClick={() => onViewDetails(d._id)}
+                                            aria-label={`View details for ${d.name}`}
+                                        >
+                                            <Info className="size-4" />
+                                        </Button>
+                                    )}
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => addToRanked(d)}
+                                    >
+                                        Add to ranking
+                                    </Button>
+                                </div>
                             </li>
                         ))}
                     </ul>
