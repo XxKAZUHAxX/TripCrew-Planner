@@ -5,6 +5,7 @@ import {
     isStorageConfigured,
     uploadImage,
     deleteImage as removeImageObject,
+    deleteImages as removeImageObjects,
 } from '../config/storage.js';
 
 // Validates a freeform estimated cost: null clears it, otherwise a finite
@@ -383,6 +384,10 @@ export async function deleteDestination(
         if (!isProposer && !isCreator) {
             res.status(403).json({ message: 'Only the proposer or trip creator can delete this' });
             return;
+        }
+        // Cascade-clean any uploaded photos so they don't linger in R2 (Feature 7).
+        if (isStorageConfigured() && destination.images.length > 0) {
+            await removeImageObjects(destination.images.map((img) => img.key));
         }
         await destination.deleteOne();
         res.json({ ok: true });

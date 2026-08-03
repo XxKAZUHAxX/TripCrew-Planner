@@ -7,6 +7,7 @@ import Availability from '../models/Availability.js';
 import { evaluateDeadlock } from '../utils/deadlock.js';
 import { rankByScore } from '../utils/borda.js';
 import { computeParticipation } from '../utils/participation.js';
+import { isStorageConfigured, deleteImages } from '../config/storage.js';
 
 // The availability deadline may never precede the voting deadline: dates are
 // only meaningful once a destination race is closing. Returns an error message
@@ -200,6 +201,12 @@ export async function previewTrip(req: Request, res: Response, next: NextFunctio
 export async function deleteTrip(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
         const trip = req.trip;
+        // Cascade-clean any uploaded photos so they don't linger in R2 (Feature 7).
+        if (isStorageConfigured()) {
+            const destinations = await Destination.find({ tripId: trip._id }, 'images');
+            const keys = destinations.flatMap((d) => d.images.map((img) => img.key));
+            if (keys.length > 0) await deleteImages(keys);
+        }
         await Promise.all([
             Destination.deleteMany({ tripId: trip._id }),
             Vote.deleteMany({ tripId: trip._id }),

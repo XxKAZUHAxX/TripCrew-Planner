@@ -76,3 +76,18 @@ export async function uploadImage(
 export async function deleteImage(key: string): Promise<void> {
     await getClient().send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET, Key: key }));
 }
+
+// Best-effort bulk removal used when cascading a destination/trip delete.
+// Each object is removed independently so one failure doesn't block the rest.
+export async function deleteImages(keys: string[]): Promise<void> {
+    if (keys.length === 0) return;
+    await Promise.all(
+        keys.map((key) =>
+            getClient()
+                .send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET, Key: key }))
+                .catch(() => {
+                    /* ignore storage errors — deletion is best-effort */
+                })
+        )
+    );
+}
