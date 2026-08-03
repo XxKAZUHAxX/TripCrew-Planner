@@ -18,6 +18,19 @@ interface DestinationListProps {
     onPropose: (payload: ProposeDestinationRequest) => void | Promise<void>;
     onDelete: (id: string) => void | Promise<void>;
     onUpdateCost: (id: string, estimatedCost: number | null) => void | Promise<void>;
+    onUpdateDetails: (
+        id: string,
+        payload: {
+            notes?: string;
+            links?: string[];
+            tags?: string[];
+            location?: { lat: number; lng: number } | null;
+        }
+    ) => void | Promise<void>;
+    onAddComment: (id: string, text: string) => void | Promise<void>;
+    onDeleteComment: (id: string, commentId: string) => void | Promise<void>;
+    onUploadImages: (id: string, files: File[]) => void | Promise<void>;
+    onDeleteImage: (id: string, imageId: string) => void | Promise<void>;
 }
 
 export default function DestinationList({
@@ -28,6 +41,11 @@ export default function DestinationList({
     onPropose,
     onDelete,
     onUpdateCost,
+    onUpdateDetails,
+    onAddComment,
+    onDeleteComment,
+    onUploadImages,
+    onDeleteImage,
 }: DestinationListProps) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -118,10 +136,17 @@ export default function DestinationList({
                             <DestinationCard
                                 key={d._id}
                                 destination={d}
+                                currentUserId={currentUserId}
+                                creatorId={creatorId}
                                 canDelete={canManage}
                                 canEdit={canManage}
                                 onDelete={onDelete}
                                 onUpdateCost={onUpdateCost}
+                                onUpdateDetails={onUpdateDetails}
+                                onAddComment={onAddComment}
+                                onDeleteComment={onDeleteComment}
+                                onUploadImages={onUploadImages}
+                                onDeleteImage={onDeleteImage}
                             />
                         );
                     })}

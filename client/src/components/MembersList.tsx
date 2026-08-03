@@ -35,10 +35,7 @@ export default function MembersList({
                 return (
                     <li
                         key={m._id}
-                        className={cn(
-                            'rounded-lg border bg-card p-3',
-                            hasOptedOut && 'opacity-60'
-                        )}
+                        className={cn('rounded-lg border bg-card p-3', hasOptedOut && 'opacity-60')}
                     >
                         <div className="flex items-center justify-between gap-2">
                             <span className="flex items-center gap-1.5 font-medium">

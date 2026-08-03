@@ -22,7 +22,9 @@ async function loadTripData(trip: TripDocument): Promise<{
     const [votes, destinations, availabilities] = await Promise.all([
         Vote.find({ tripId: trip._id }),
         Destination.find({ tripId: trip._id }),
-        Availability.find({ tripId: trip._id }).select('userId status').lean<MemberAvailability[]>(),
+        Availability.find({ tripId: trip._id })
+            .select('userId status')
+            .lean<MemberAvailability[]>(),
     ]);
     return { votes, destinations, availabilities };
 }

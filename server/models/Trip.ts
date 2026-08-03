@@ -33,6 +33,8 @@ export interface ITrip {
     winningDestination: Types.ObjectId | null;
     // Playbook instructions stored inline (Feature 4, Decision 1).
     instructions: string;
+    // Members (besides the creator) granted playbook edit rights (Feature 9).
+    playbookEditors: Types.ObjectId[];
     checklistTemplates: Types.DocumentArray<IChecklistTask>;
     createdAt: Date;
     updatedAt: Date;
@@ -41,6 +43,7 @@ export interface ITrip {
 export interface ITripMethods {
     isMember(userId: Types.ObjectId | string): boolean;
     isCreator(userId: Types.ObjectId | string): boolean;
+    canEditPlaybook(userId: Types.ObjectId | string): boolean;
 }
 
 type TripModel = Model<ITrip, Record<string, never>, ITripMethods>;
@@ -77,6 +80,7 @@ const tripSchema = new Schema<ITrip, TripModel, ITripMethods>(
             default: null,
         },
         instructions: { type: String, default: '' },
+        playbookEditors: [{ type: Schema.Types.ObjectId, ref: 'User' }],
         checklistTemplates: { type: [checklistTaskSchema], default: [] },
     },
     { timestamps: true }
@@ -91,6 +95,13 @@ tripSchema.methods.isMember = function isMember(userId: Types.ObjectId | string)
 
 tripSchema.methods.isCreator = function isCreator(userId: Types.ObjectId | string): boolean {
     return this.creator.equals(userId);
+};
+
+// Creator always qualifies; other members must be listed in playbookEditors.
+tripSchema.methods.canEditPlaybook = function canEditPlaybook(
+    userId: Types.ObjectId | string
+): boolean {
+    return this.isCreator(userId) || this.playbookEditors.some((e) => e.equals(userId));
 };
 
 export type TripDocument = HydratedDocument<ITrip, ITripMethods>;

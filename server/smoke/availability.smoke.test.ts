@@ -76,9 +76,8 @@ describe('availability', () => {
 
         const host = await makeUser('Hank', 'hank@example.com');
         const guest = await makeUser('Gina', 'gina@example.com');
-        const trip = (
-            await api('POST', '/api/trips', { token: host, body: { title: 'Opt Trip' } })
-        ).data.trip;
+        const trip = (await api('POST', '/api/trips', { token: host, body: { title: 'Opt Trip' } }))
+            .data.trip;
         await api('POST', `/api/trips/join/${trip.inviteCode}`, { token: guest });
         const aBase = `/api/trips/${trip._id}/availability`;
 

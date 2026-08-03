@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import type { AvailabilityMember } from '@tripcrew/shared';
 import type { MonthCell } from '@/utils/dateKeys';
 import { countToColor } from '@/utils/colorScale';
 import { cn } from '@/lib/utils';
@@ -6,41 +8,105 @@ interface DateCellProps {
     cell: MonthCell | null;
     count: number;
     selected: boolean;
+    /** Members available on this date (drives the who's-available indicator). */
+    members?: AvailabilityMember[];
     onPointerDown: (key: string) => void;
     onPointerEnter: (key: string) => void;
+}
+
+/** First letter of a member's name — used for the compact per-cell indicator. */
+function initial(name: string): string {
+    const trimmed = name.trim();
+    return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
 }
 
 export default function DateCell({
     cell,
     count,
     selected,
+    members = [],
     onPointerDown,
     onPointerEnter,
 }: DateCellProps) {
+    // Local toggle so touch users can reveal the list without toggling the date.
+    const [open, setOpen] = useState(false);
+
     if (!cell) {
         return <div aria-hidden className="aspect-square" />;
     }
 
     const bg = countToColor(count || 0);
+    const hasMembers = members.length > 0;
 
     return (
-        <button
-            type="button"
-            className={cn(
-                'flex aspect-square touch-none select-none items-center justify-center rounded-md border text-xs transition',
-                selected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-border'
+        <div className="group/cell relative">
+            <button
+                type="button"
+                className={cn(
+                    'flex aspect-square w-full touch-none select-none flex-col items-center justify-center rounded-md border text-xs transition',
+                    selected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-border'
+                )}
+                style={{ backgroundColor: bg, color: count >= 3 ? '#fff' : undefined }}
+                onPointerDown={(e) => {
+                    // Prevent scroll/text-selection interfering with touch drag-select.
+                    e.preventDefault();
+                    onPointerDown(cell.key);
+                }}
+                onPointerEnter={() => onPointerEnter(cell.key)}
+                title={`${cell.key} · ${count || 0} available`}
+                aria-pressed={selected}
+            >
+                <span className="leading-none">{cell.day}</span>
+                {hasMembers && (
+                    <span
+                        aria-hidden
+                        className="mt-0.5 flex max-w-full items-center gap-px overflow-hidden text-[0.5rem] font-semibold leading-none opacity-80"
+                    >
+                        {members.slice(0, 3).map((m) => (
+                            <span key={m.id}>{initial(m.name)}</span>
+                        ))}
+                        {members.length > 3 && <span>+</span>}
+                    </span>
+                )}
+            </button>
+            {hasMembers && (
+                <>
+                    {/* Corner toggle: reveals the member list on tap/click without
+                        triggering the drag-select on the underlying date button. */}
+                    <button
+                        type="button"
+                        aria-label={`Show who's available on ${cell.key}`}
+                        aria-expanded={open}
+                        className="absolute -right-1 -top-1 z-10 flex size-3.5 items-center justify-center rounded-full border border-border bg-background text-[0.55rem] font-bold leading-none text-foreground shadow-sm"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setOpen((v) => !v);
+                        }}
+                        onBlur={() => setOpen(false)}
+                    >
+                        {members.length}
+                    </button>
+                    <div
+                        role="tooltip"
+                        className={cn(
+                            'absolute bottom-full left-1/2 z-50 mb-1 w-max max-w-[11rem] -translate-x-1/2',
+                            'rounded-md border border-border bg-popover px-2 py-1.5 text-left',
+                            'text-[0.7rem] leading-tight text-popover-foreground shadow-md',
+                            open
+                                ? 'block'
+                                : 'hidden group-hover/cell:block group-focus-within/cell:block'
+                        )}
+                    >
+                        <p className="mb-0.5 font-semibold">{members.length} available</p>
+                        <ul className="space-y-0.5">
+                            {members.map((m) => (
+                                <li key={m.id}>{m.name}</li>
+                            ))}
+                        </ul>
+                    </div>
+                </>
             )}
-            style={{ backgroundColor: bg, color: count >= 3 ? '#fff' : undefined }}
-            onPointerDown={(e) => {
-                // Prevent scroll/text-selection interfering with touch drag-select.
-                e.preventDefault();
-                onPointerDown(cell.key);
-            }}
-            onPointerEnter={() => onPointerEnter(cell.key)}
-            title={`${cell.key} · ${count || 0} available`}
-            aria-pressed={selected}
-        >
-            {cell.day}
-        </button>
+        </div>
     );
 }

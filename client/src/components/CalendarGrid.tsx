@@ -1,4 +1,4 @@
-import type { Heatmap } from '@tripcrew/shared';
+import type { AvailabilityMember, Heatmap } from '@tripcrew/shared';
 import { buildMonthCells, MONTH_NAMES, WEEKDAY_LABELS } from '@/utils/dateKeys';
 import DateCell from './DateCell';
 import Legend from './Legend';
@@ -9,6 +9,8 @@ interface CalendarGridProps {
     heatmap: Heatmap;
     myDates: Set<string>;
     totalMembers?: number;
+    /** Map of date key → members available on that date, for per-cell indicators. */
+    membersByDate?: Record<string, AvailabilityMember[]>;
     onPointerDown: (key: string) => void;
     onPointerEnter: (key: string) => void;
 }
@@ -19,6 +21,7 @@ export default function CalendarGrid({
     heatmap,
     myDates,
     totalMembers,
+    membersByDate,
     onPointerDown,
     onPointerEnter,
 }: CalendarGridProps) {
@@ -44,6 +47,7 @@ export default function CalendarGrid({
                         cell={cell}
                         count={cell ? heatmap[cell.key] || 0 : 0}
                         selected={cell ? myDates.has(cell.key) : false}
+                        members={cell ? membersByDate?.[cell.key] : undefined}
                         onPointerDown={onPointerDown}
                         onPointerEnter={onPointerEnter}
                     />

@@ -29,7 +29,15 @@ import {
     leaveTrip,
     deleteTrip,
 } from '@/api/trips.api';
-import { proposeDestination, deleteDestination, updateDestination } from '@/api/destinations.api';
+import {
+    proposeDestination,
+    deleteDestination,
+    updateDestination,
+    addComment,
+    deleteComment,
+    uploadImages,
+    deleteDestinationImage,
+} from '@/api/destinations.api';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/errors';
 import { refId } from '@/utils/refs';
@@ -137,6 +145,63 @@ export default function TripDashboard() {
             toast.success('Estimated cost updated.');
         } catch (err) {
             toast.error(getErrorMessage(err, 'Failed to update cost'));
+        }
+    }
+
+    async function handleUpdateDetails(
+        id: string,
+        payload: {
+            notes?: string;
+            links?: string[];
+            tags?: string[];
+            location?: { lat: number; lng: number } | null;
+        }
+    ) {
+        try {
+            await updateDestination(tripId, id, payload);
+            await load();
+            toast.success('Details updated.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to update details'));
+        }
+    }
+
+    async function handleAddComment(id: string, text: string) {
+        try {
+            await addComment(tripId, id, text);
+            await load();
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to add comment'));
+        }
+    }
+
+    async function handleDeleteComment(id: string, commentId: string) {
+        try {
+            await deleteComment(tripId, id, commentId);
+            await load();
+            toast.success('Comment deleted.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to delete comment'));
+        }
+    }
+
+    async function handleUploadImages(id: string, files: File[]) {
+        try {
+            await uploadImages(tripId, id, files);
+            await load();
+            toast.success('Photos uploaded.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to upload photos'));
+        }
+    }
+
+    async function handleDeleteImage(id: string, imageId: string) {
+        try {
+            await deleteDestinationImage(tripId, id, imageId);
+            await load();
+            toast.success('Photo deleted.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to delete photo'));
         }
     }
 
@@ -401,6 +466,11 @@ export default function TripDashboard() {
                         onPropose={handlePropose}
                         onDelete={handleDelete}
                         onUpdateCost={handleUpdateCost}
+                        onUpdateDetails={handleUpdateDetails}
+                        onAddComment={handleAddComment}
+                        onDeleteComment={handleDeleteComment}
+                        onUploadImages={handleUploadImages}
+                        onDeleteImage={handleDeleteImage}
                     />
                 </div>
 

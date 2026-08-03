@@ -29,7 +29,7 @@ export async function getPlaybook(req: Request, res: Response, next: NextFunctio
     }
 }
 
-// Creator-only (enforced by middleware on the route).
+// Creator or a granted playbook editor (enforced by middleware on the route).
 export async function updateInstructions(
     req: Request,
     res: Response,

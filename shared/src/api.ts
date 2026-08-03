@@ -72,6 +72,11 @@ export interface CreateTripRequest {
 
 export type UpdateTripRequest = Partial<CreateTripRequest>;
 
+/** Grant playbook edit rights to the given members (creator-only). */
+export interface UpdatePlaybookEditorsRequest {
+    editorIds: string[];
+}
+
 export interface ToggleInviteRequest {
     inviteActive: boolean;
 }
@@ -121,9 +126,18 @@ export interface ProposeDestinationRequest {
     estimatedCost?: number | null;
 }
 
-/** Edit a destination's mutable fields (Feature 7). */
+/** Edit a destination's mutable fields (Features 7, 4 & 5). */
 export interface UpdateDestinationRequest {
     estimatedCost?: number | null;
+    notes?: string;
+    links?: string[];
+    tags?: string[];
+    location?: { lat: number; lng: number } | null;
+}
+
+/** Add a comment to a destination (Feature 4). */
+export interface AddCommentRequest {
+    text: string;
 }
 
 export interface DestinationResponse {

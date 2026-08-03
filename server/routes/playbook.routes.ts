@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import {
     requireMembership,
-    requireCreator,
+    requirePlaybookEditor,
     requireDecided,
 } from '../middleware/trip.middleware.js';
 import {
@@ -23,7 +23,7 @@ router.patch(
     requireAuth,
     requireMembership,
     requireDecided,
-    requireCreator,
+    requirePlaybookEditor,
     updateInstructions
 );
 router.post('/tasks', requireAuth, requireMembership, requireDecided, addTask);
