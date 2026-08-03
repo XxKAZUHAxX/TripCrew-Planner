@@ -53,6 +53,9 @@ export default function DestinationList({
     const [submitting, setSubmitting] = useState(false);
 
     const proposalsOpen = status === 'voting';
+    // Once voting has concluded, every destination (winner and losers alike)
+    // becomes a read-only record of what was proposed (Feature 6).
+    const locked = status !== 'voting';
 
     // Lowest-budget badge (Feature 3): only meaningful once at least two
     // destinations have an estimate to compare.
@@ -135,6 +138,11 @@ export default function DestinationList({
                 <p className="text-sm text-muted-foreground">No destinations proposed yet.</p>
             ) : (
                 <div className="space-y-2">
+                    {locked && (
+                        <p className="text-xs text-muted-foreground">
+                            Voting has concluded — destinations are now read-only.
+                        </p>
+                    )}
                     {destinations.map((d) => {
                         const proposerId = refId(d.proposedBy);
                         const canManage =
@@ -145,18 +153,18 @@ export default function DestinationList({
                                 destination={d}
                                 currentUserId={currentUserId}
                                 creatorId={creatorId}
-                                canDelete={canManage}
-                                canEdit={canManage}
+                                canDelete={canManage && !locked}
+                                canEdit={canManage && !locked}
                                 isLowestBudget={
                                     lowestCost !== null && d.estimatedCost === lowestCost
                                 }
                                 onDelete={onDelete}
                                 onUpdateCost={onUpdateCost}
-                                onUpdateDetails={onUpdateDetails}
-                                onAddComment={onAddComment}
-                                onDeleteComment={onDeleteComment}
-                                onUploadImages={onUploadImages}
-                                onDeleteImage={onDeleteImage}
+                                onUpdateDetails={locked ? undefined : onUpdateDetails}
+                                onAddComment={locked ? undefined : onAddComment}
+                                onDeleteComment={locked ? undefined : onDeleteComment}
+                                onUploadImages={locked ? undefined : onUploadImages}
+                                onDeleteImage={locked ? undefined : onDeleteImage}
                             />
                         );
                     })}

@@ -121,6 +121,12 @@ export async function updateDestination(
     next: NextFunction
 ): Promise<void> {
     try {
+        if (req.trip.status !== 'voting') {
+            res.status(403).json({
+                message: 'Destinations are locked now that voting has concluded for this trip.',
+            });
+            return;
+        }
         const { estimatedCost, notes, links, tags, location } = req.body;
         if (estimatedCost !== undefined && !isValidCost(estimatedCost)) {
             res.status(400).json({
@@ -169,6 +175,12 @@ export async function updateDestination(
 // Any trip member may add a comment (Feature 4).
 export async function addComment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+        if (req.trip.status !== 'voting') {
+            res.status(403).json({
+                message: 'Destinations are locked now that voting has concluded for this trip.',
+            });
+            return;
+        }
         const { text } = req.body;
         if (!text || typeof text !== 'string' || !text.trim()) {
             res.status(400).json({ message: 'Comment text is required' });
@@ -200,6 +212,12 @@ export async function deleteComment(
     next: NextFunction
 ): Promise<void> {
     try {
+        if (req.trip.status !== 'voting') {
+            res.status(403).json({
+                message: 'Destinations are locked now that voting has concluded for this trip.',
+            });
+            return;
+        }
         const destination = await Destination.findOne({
             _id: req.params.id,
             tripId: req.trip._id,
@@ -233,6 +251,12 @@ export async function deleteComment(
 // multer middleware has already validated type/size and populated req.files.
 export async function uploadImages(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+        if (req.trip.status !== 'voting') {
+            res.status(403).json({
+                message: 'Destinations are locked now that voting has concluded for this trip.',
+            });
+            return;
+        }
         if (!isStorageConfigured()) {
             res.status(503).json({
                 message: 'Photo uploads are not configured on this server.',
@@ -274,6 +298,12 @@ export async function uploadImages(req: Request, res: Response, next: NextFuncti
 // The uploader or the trip creator may delete a photo (Feature 6).
 export async function deleteImage(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+        if (req.trip.status !== 'voting') {
+            res.status(403).json({
+                message: 'Destinations are locked now that voting has concluded for this trip.',
+            });
+            return;
+        }
         const destination = await Destination.findOne({
             _id: req.params.id,
             tripId: req.trip._id,
@@ -333,6 +363,12 @@ export async function deleteDestination(
     next: NextFunction
 ): Promise<void> {
     try {
+        if (req.trip.status !== 'voting') {
+            res.status(403).json({
+                message: 'Destinations are locked now that voting has concluded for this trip.',
+            });
+            return;
+        }
         const destination = await Destination.findOne({
             _id: req.params.id,
             tripId: req.trip._id,

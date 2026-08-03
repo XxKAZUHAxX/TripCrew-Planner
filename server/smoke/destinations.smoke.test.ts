@@ -205,4 +205,44 @@ describe('destinations', () => {
         });
         assert(del.status === 404, 'delete missing image returns 404');
     });
+
+    it('locks destinations read-only once voting concludes (F6)', async () => {
+        const { api } = h;
+        const reg = await api('POST', '/api/auth/register', {
+            body: { name: 'Host', email: 'host-lock@example.com', password: 'pw12345' },
+        });
+        const token = reg.data.token;
+        const trip = (await api('POST', '/api/trips', { token, body: { title: 'Lock Trip' } }))
+            .data.trip;
+        const tBase = `/api/trips/${trip._id}`;
+        const base = `${tBase}/destinations`;
+        const dest = (await api('POST', base, { token, body: { name: 'Winner' } })).data
+            .destination;
+        const dBase = `${base}/${dest._id}`;
+
+        // A single-destination, single-voter ranking gives it a clear positive
+        // score with no tie, so concluding should decide it outright.
+        await api('PUT', `${tBase}/vote`, { token, body: { ranking: [dest._id] } });
+        const conclude = await api('POST', `${tBase}/conclude`, { token });
+        assert(conclude.status === 200 && conclude.data.status === 'decided', 'trip decided');
+
+        const editAfter = await api('PATCH', dBase, { token, body: { estimatedCost: 100 } });
+        assert(editAfter.status === 403, 'cost/details edit locked after conclusion');
+
+        const commentAfter = await api('POST', `${dBase}/comments`, {
+            token,
+            body: { text: 'too late' },
+        });
+        assert(commentAfter.status === 403, 'adding comments locked after conclusion');
+
+        const uploadAfter = await api('POST', `${dBase}/images`, { token, body: {} });
+        assert(uploadAfter.status === 403, 'uploading photos locked after conclusion');
+
+        const deleteAfter = await api('DELETE', dBase, { token });
+        assert(deleteAfter.status === 403, 'deleting the destination locked after conclusion');
+
+        // Read-only viewing remains available.
+        const list = await api('GET', base, { token });
+        assert(list.status === 200 && list.data.destinations.length === 1, 'still viewable');
+    });
 });
