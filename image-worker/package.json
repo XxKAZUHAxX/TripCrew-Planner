@@ -1,0 +1,15 @@
+{
+    "name": "tripcrew-image-worker",
+    "private": true,
+    "version": "1.0.0",
+    "description": "Cloudflare Worker that serves TripCrew destination photos from R2 on a workers.dev URL (avoids the unreliable public r2.dev domain).",
+    "type": "module",
+    "scripts": {
+        "dev": "wrangler dev",
+        "deploy": "wrangler deploy"
+    },
+    "devDependencies": {
+        "typescript": "^5.6.3",
+        "wrangler": "^4.0.0"
+    }
+}

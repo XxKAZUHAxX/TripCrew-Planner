@@ -1,0 +1,10 @@
+name = "tripcrew-images"
+main = "src/index.ts"
+compatibility_date = "2026-08-03"
+
+# Binds this Worker to the existing R2 bucket used by the API server
+# (server/config/storage.ts uploads here). No secrets needed — R2 bindings
+# grant access directly, scoped to this Worker.
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "tripcrewplanner"
