@@ -257,6 +257,8 @@ CLIENT_ORIGIN=http://localhost:5173
 
 **`CLIENT_ORIGIN`** — must match the address the React dev server runs on (default `http://localhost:5173`). Change this to your production domain when deploying.
 
+**`MAINTENANCE_SECRET`** (optional) — enables `POST /api/maintenance/cleanup`, which prunes stale data (old votes/availability for long-decided trips, dormant user accounts — see [Section 9](#9-feature-guides)). Leave blank to disable the endpoint. When set, call it periodically with header `x-maintenance-key: <value>` (a sample GitHub Actions cron workflow is included at `.github/workflows/maintenance-cleanup.yml`, since the API scales to zero and can't run an in-process cron reliably). The server also runs one best-effort pass automatically on startup.
+
 ---
 
 ### 5.2 Client environment (`client/.env`)

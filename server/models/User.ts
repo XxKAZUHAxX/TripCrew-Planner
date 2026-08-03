@@ -5,6 +5,10 @@ export interface IUser {
     name: string;
     email: string;
     passwordHash: string;
+    /** Updated on every successful login (Feature 8 activity tracking). */
+    lastLoginAt: Date;
+    /** Set once lastLoginAt exceeds the inactivity threshold; cleared on next login. */
+    inactiveAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -35,6 +39,8 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
             trim: true,
         },
         passwordHash: { type: String, required: true, select: false },
+        lastLoginAt: { type: Date, default: () => new Date() },
+        inactiveAt: { type: Date, default: null },
     },
     { timestamps: true }
 );

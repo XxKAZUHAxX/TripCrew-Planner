@@ -9,6 +9,7 @@ import { createApp } from '../app.js';
 export interface ApiOptions {
     token?: string;
     body?: unknown;
+    headers?: Record<string, string>;
 }
 
 export interface ApiResponse {
@@ -38,8 +39,8 @@ export async function boot(): Promise<Harness> {
     const base = `http://localhost:${port}`;
 
     async function api(method: string, path: string, opts: ApiOptions = {}): Promise<ApiResponse> {
-        const { token, body } = opts;
-        const headers: Record<string, string> = {};
+        const { token, body, headers: extraHeaders } = opts;
+        const headers: Record<string, string> = { ...extraHeaders };
         if (body) headers['Content-Type'] = 'application/json';
         if (token) headers.Authorization = `Bearer ${token}`;
         const res = await fetch(base + path, {

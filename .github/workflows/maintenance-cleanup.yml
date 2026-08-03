@@ -1,0 +1,25 @@
+name: Maintenance cleanup
+
+# Feature 8 (DB storage optimization): since the API scales to zero on
+# Fly.io (min_machines_running=0), an in-process cron can't be relied on to
+# fire. This workflow pings the maintenance endpoint on a schedule instead,
+# which also wakes the machine to run it.
+#
+# Required repository secrets:
+#   MAINTENANCE_API_URL  e.g. https://tripcrew-api.fly.dev
+#   MAINTENANCE_SECRET   must match the server's MAINTENANCE_SECRET env var
+
+on:
+  schedule:
+    - cron: '0 18 * * *' # daily, 18:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger stale-data cleanup
+        run: |
+          curl --fail --silent --show-error \
+            -X POST "${{ secrets.MAINTENANCE_API_URL }}/api/maintenance/cleanup" \
+            -H "x-maintenance-key: ${{ secrets.MAINTENANCE_SECRET }}"

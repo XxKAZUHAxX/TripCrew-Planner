@@ -34,8 +34,9 @@ interface DestinationDetailsModalProps {
     onDeleteImage?: (id: string, imageId: string) => void | Promise<void>;
 }
 
-function authorName(ref: string | UserRef): string {
-    return typeof ref === 'string' ? 'Member' : ref.name;
+function authorName(ref: string | UserRef | null | undefined): string {
+    if (!ref || typeof ref === 'string') return 'Member';
+    return ref.name;
 }
 
 export default function DestinationDetailsModal({

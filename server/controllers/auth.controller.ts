@@ -41,6 +41,10 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
             res.status(401).json({ message: 'Invalid credentials' });
             return;
         }
+        // Reactivate the account and refresh the activity timestamp (Feature 8).
+        user.lastLoginAt = new Date();
+        user.inactiveAt = null;
+        await user.save();
         const token = issueToken(user);
         res.json({ token, user: user.toSafeJSON() });
     } catch (err) {
