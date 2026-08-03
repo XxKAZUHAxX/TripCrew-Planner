@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import type { AvailabilityMember } from '@tripcrew/shared';
 import type { MonthCell } from '@/utils/dateKeys';
-import { countToColor } from '@/utils/colorScale';
+import { countToColor, isDarkShade } from '@/utils/colorScale';
 import { cn } from '@/lib/utils';
 
 interface DateCellProps {
     cell: MonthCell | null;
     count: number;
     selected: boolean;
+    /** Total trip members, used to scale the gradient color by proportion. */
+    totalMembers?: number;
     /** Members available on this date (drives the who's-available indicator). */
     members?: AvailabilityMember[];
     onPointerDown: (key: string) => void;
@@ -24,6 +26,7 @@ export default function DateCell({
     cell,
     count,
     selected,
+    totalMembers,
     members = [],
     onPointerDown,
     onPointerEnter,
@@ -35,7 +38,7 @@ export default function DateCell({
         return <div aria-hidden className="aspect-square" />;
     }
 
-    const bg = countToColor(count || 0);
+    const bg = countToColor(count || 0, totalMembers);
     const hasMembers = members.length > 0;
 
     return (
@@ -46,7 +49,10 @@ export default function DateCell({
                     'flex aspect-square w-full touch-none select-none flex-col items-center justify-center rounded-md border text-xs transition',
                     selected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-border'
                 )}
-                style={{ backgroundColor: bg, color: count >= 3 ? '#fff' : undefined }}
+                style={{
+                    backgroundColor: bg,
+                    color: isDarkShade(count, totalMembers) ? '#fff' : undefined,
+                }}
                 onPointerDown={(e) => {
                     // Prevent scroll/text-selection interfering with touch drag-select.
                     e.preventDefault();

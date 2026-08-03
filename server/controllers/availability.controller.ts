@@ -113,12 +113,15 @@ export async function getAvailabilitySummary(
                 },
             },
         ]);
+        // Exclude dates that have already passed so stale rankings don't
+        // outrank still-viable upcoming dates.
+        const todayKey = new Date().toISOString().slice(0, 10);
         const entries = rows
             .map((r: { date: string; members: { id: unknown; name: string }[] }) => ({
                 date: r.date,
                 members: r.members.map((m) => ({ id: String(m.id), name: m.name })),
             }))
-            .filter((e) => e.members.length > 0)
+            .filter((e) => e.members.length > 0 && e.date >= todayKey)
             .sort((a, b) => b.members.length - a.members.length || a.date.localeCompare(b.date));
         res.json({ memberCount: req.trip.members.length, entries });
     } catch (err) {

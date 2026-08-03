@@ -47,6 +47,7 @@ export default function CalendarGrid({
                         cell={cell}
                         count={cell ? heatmap[cell.key] || 0 : 0}
                         selected={cell ? myDates.has(cell.key) : false}
+                        totalMembers={totalMembers}
                         members={cell ? membersByDate?.[cell.key] : undefined}
                         onPointerDown={onPointerDown}
                         onPointerEnter={onPointerEnter}

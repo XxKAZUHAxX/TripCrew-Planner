@@ -4,18 +4,24 @@ interface LegendStep {
 }
 
 interface LegendProps {
-    /** Total members in the trip, used to label the top step (Issue 4/5). */
+    /** Total members in the trip, used to label steps with actual headcounts (Issue 4/5). */
     totalMembers?: number;
 }
 
 export default function Legend({ totalMembers }: LegendProps) {
-    const topLabel =
-        totalMembers && totalMembers > 0 ? `All ${totalMembers} available` : '3+ available';
+    const of = (pct: number): string => {
+        if (!totalMembers || totalMembers <= 0) return `${pct}%`;
+        return `~${Math.round((totalMembers * pct) / 100)} of ${totalMembers}`;
+    };
     const steps: LegendStep[] = [
-        { color: '#ffffff', label: '0 available' },
-        { color: '#C0DD97', label: '1 available' },
-        { color: '#5DCAA5', label: '2 available' },
-        { color: '#0F6E56', label: topLabel },
+        { color: '#ffffff', label: 'None available' },
+        { color: '#C0DD97', label: `${of(25)} available` },
+        { color: '#5DCAA5', label: `${of(50)} available` },
+        { color: '#2E9E7A', label: `${of(75)} available` },
+        {
+            color: '#0F6E56',
+            label: totalMembers && totalMembers > 0 ? `All ${totalMembers} available` : 'Everyone available',
+        },
     ];
     return (
         <div className="mt-3 flex flex-wrap items-center gap-3">
