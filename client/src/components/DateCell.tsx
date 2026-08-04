@@ -21,12 +21,6 @@ interface DateCellProps {
     onPointerEnter: (key: string) => void;
 }
 
-/** First letter of a member's name — used for the compact per-cell indicator. */
-function initial(name: string): string {
-    const trimmed = name.trim();
-    return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
-}
-
 export default function DateCell({
     cell,
     count,
@@ -76,21 +70,9 @@ export default function DateCell({
                 onBlur={() => {
                     if (isNavigate) setOpen(false);
                 }}
-                title={`${cell.key} · ${count || 0} available`}
                 aria-pressed={isNavigate ? undefined : selected}
             >
                 <span className="leading-none">{cell.day}</span>
-                {hasMembers && (
-                    <span
-                        aria-hidden
-                        className="mt-0.5 flex max-w-full items-center gap-px overflow-hidden text-[0.5rem] font-semibold leading-none opacity-80"
-                    >
-                        {members.slice(0, 3).map((m) => (
-                            <span key={m.id}>{initial(m.name)}</span>
-                        ))}
-                        {members.length > 3 && <span>+</span>}
-                    </span>
-                )}
             </button>
             {!isNavigate && hasMembers && (
                 <>
