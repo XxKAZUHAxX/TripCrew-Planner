@@ -36,7 +36,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageLoader } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
-import { Switch } from '@/components/ui/switch';
+import ModePicker from '@/components/ModePicker';
 import DeadlineBadge from '@/components/DeadlineBadge';
 import CalendarGrid from '@/components/CalendarGrid';
 
@@ -349,14 +349,10 @@ export default function AvailabilityPage() {
                         </Button>
                     </div>
                     {status !== 'opted_out' && (
-                        <div className="mb-4 flex justify-center">
-                            <Switch
-                                checked={interactionMode === 'set'}
-                                onCheckedChange={(checked) =>
-                                    setInteractionMode(checked ? 'set' : 'navigate')
-                                }
-                                leftLabel="Browse"
-                                rightLabel="Mark dates"
+                        <div className="mb-4">
+                            <ModePicker
+                                mode={interactionMode}
+                                onModeChange={setInteractionMode}
                             />
                         </div>
                     )}
