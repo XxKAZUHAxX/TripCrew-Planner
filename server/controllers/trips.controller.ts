@@ -68,7 +68,11 @@ export async function getTrip(req: Request, res: Response, next: NextFunction): 
             { path: 'creator', select: 'name email' },
             { path: 'winningDestination' },
         ]);
-        const destinations = await Destination.find({ tripId: trip._id }).sort({ createdAt: 1 });
+        const destinations = await Destination.find({ tripId: trip._id })
+            .populate('proposedBy', 'name email')
+            .populate('comments.userId', 'name email')
+            .populate('images.uploadedBy', 'name email')
+            .sort({ createdAt: 1 });
         res.json({ trip, members: trip.members, destinations });
     } catch (err) {
         next(err);

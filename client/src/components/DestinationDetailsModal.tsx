@@ -139,7 +139,10 @@ export default function DestinationDetailsModal({
 
                 <div className="max-h-[75vh] space-y-4 overflow-y-auto p-5">
                     <Card>
-                        <CardContent className="pt-5">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm">Details</CardTitle>
+                        </CardHeader>
+                        <CardContent>
                             {destination.description && (
                                 <p className="text-sm text-muted-foreground">
                                     {destination.description}
