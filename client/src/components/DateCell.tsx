@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { AvailabilityMember } from '@tripcrew/shared';
 import type { MonthCell } from '@/utils/dateKeys';
 import { countToColor, isDarkShade } from '@/utils/colorScale';
@@ -17,6 +16,10 @@ interface DateCellProps {
      * 'navigate' = tap only reveals who's available; no voting happens.
      */
     mode?: 'set' | 'navigate';
+    /** Whether this cell's tooltip is the active (only) one. */
+    isTooltipOpen?: boolean;
+    /** Toggle the tooltip for a given date key. Called on click/tap. */
+    onToggleTooltip?: (key: string) => void;
     onPointerDown: (key: string) => void;
     onPointerEnter: (key: string) => void;
 }
@@ -28,11 +31,11 @@ export default function DateCell({
     totalMembers,
     members = [],
     mode = 'set',
+    isTooltipOpen = false,
+    onToggleTooltip = () => {},
     onPointerDown,
     onPointerEnter,
 }: DateCellProps) {
-    // Local toggle so touch users can reveal the list without toggling the date.
-    const [open, setOpen] = useState(false);
 
     if (!cell) {
         return <div aria-hidden className="aspect-square" />;
@@ -58,7 +61,7 @@ export default function DateCell({
                     // Prevent scroll/text-selection interfering with touch drag-select.
                     e.preventDefault();
                     if (isNavigate) {
-                        setOpen((v) => !v);
+                        onToggleTooltip(cell.key);
                         return;
                     }
                     onPointerDown(cell.key);
@@ -67,30 +70,24 @@ export default function DateCell({
                     if (isNavigate) return;
                     onPointerEnter(cell.key);
                 }}
-                onBlur={() => {
-                    if (isNavigate) setOpen(false);
-                }}
                 aria-pressed={isNavigate ? undefined : selected}
             >
                 <span className="leading-none">{cell.day}</span>
             </button>
             {!isNavigate && hasMembers && (
                 <>
-                    {/* Corner toggle: reveals the member list on tap/click without
-                        triggering the drag-select on the underlying date button.
-                        Only needed in 'set' mode — in 'navigate' mode the whole
-                        cell already opens this panel. */}
+                    {/* Corner badge: shows member count. Tap to reveal who's available
+                        without triggering the drag-select on the underlying date button. */}
                     <button
                         type="button"
                         aria-label={`Show who's available on ${cell.key}`}
-                        aria-expanded={open}
+                        aria-expanded={isTooltipOpen}
                         className="absolute -right-1 -top-1 z-10 flex size-3.5 items-center justify-center rounded-full border border-border bg-background text-[0.55rem] font-bold leading-none text-foreground shadow-sm"
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                             e.stopPropagation();
-                            setOpen((v) => !v);
+                            onToggleTooltip(cell.key);
                         }}
-                        onBlur={() => setOpen(false)}
                     >
                         {members.length}
                     </button>
@@ -100,9 +97,7 @@ export default function DateCell({
                             'absolute bottom-full left-1/2 z-50 mb-1 w-max max-w-[11rem] -translate-x-1/2',
                             'rounded-md border border-border bg-popover px-2 py-1.5 text-left',
                             'text-[0.7rem] leading-tight text-popover-foreground shadow-md',
-                            open
-                                ? 'block'
-                                : 'hidden group-hover/cell:block group-focus-within/cell:block'
+                            isTooltipOpen ? 'block' : 'hidden'
                         )}
                     >
                         <p className="mb-0.5 font-semibold">{members.length} available</p>
@@ -121,7 +116,7 @@ export default function DateCell({
                         'absolute bottom-full left-1/2 z-50 mb-1 w-max max-w-[11rem] -translate-x-1/2',
                         'rounded-md border border-border bg-popover px-2 py-1.5 text-left',
                         'text-[0.7rem] leading-tight text-popover-foreground shadow-md',
-                        open ? 'block' : 'hidden'
+                        isTooltipOpen ? 'block' : 'hidden'
                     )}
                 >
                     <p className="mb-0.5 font-semibold">{members.length} available</p>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { AvailabilityMember, Heatmap } from '@tripcrew/shared';
 import { buildMonthCells, MONTH_NAMES, WEEKDAY_LABELS } from '@/utils/dateKeys';
 import DateCell from './DateCell';
@@ -30,6 +31,9 @@ export default function CalendarGrid({
 }: CalendarGridProps) {
     const cells = buildMonthCells(year, monthIndex);
 
+    // Track the single open tooltip across all cells — only one at a time.
+    const [openDateKey, setOpenDateKey] = useState<string | null>(null);
+
     return (
         <div className="mb-6">
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">
@@ -53,6 +57,10 @@ export default function CalendarGrid({
                         totalMembers={totalMembers}
                         members={cell ? membersByDate?.[cell.key] : undefined}
                         mode={mode}
+                        isTooltipOpen={cell ? openDateKey === cell.key : false}
+                        onToggleTooltip={(key) =>
+                            setOpenDateKey((prev) => (prev === key ? null : key))
+                        }
                         onPointerDown={onPointerDown}
                         onPointerEnter={onPointerEnter}
                     />
