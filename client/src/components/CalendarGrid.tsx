@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { AvailabilityMember, Heatmap } from '@tripcrew/shared';
 import { buildMonthCells, MONTH_NAMES, WEEKDAY_LABELS } from '@/utils/dateKeys';
 import DateCell from './DateCell';
@@ -33,9 +33,25 @@ export default function CalendarGrid({
 
     // Track the single open tooltip across all cells — only one at a time.
     const [openDateKey, setOpenDateKey] = useState<string | null>(null);
+    const gridRef = useRef<HTMLDivElement>(null);
+
+    // Close the tooltip when clicking/tapping outside the calendar grid.
+    useEffect(() => {
+        function handleOutsideClick(e: MouseEvent | TouchEvent) {
+            if (openDateKey && gridRef.current && !gridRef.current.contains(e.target as Node)) {
+                setOpenDateKey(null);
+            }
+        }
+        document.addEventListener('mousedown', handleOutsideClick);
+        document.addEventListener('touchstart', handleOutsideClick);
+        return () => {
+            document.removeEventListener('mousedown', handleOutsideClick);
+            document.removeEventListener('touchstart', handleOutsideClick);
+        };
+    }, [openDateKey]);
 
     return (
-        <div className="mb-6">
+        <div className="mb-6" ref={gridRef}>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">
                 {MONTH_NAMES[monthIndex]} {year}
             </h3>

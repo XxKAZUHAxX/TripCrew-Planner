@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Pencil, Trophy, Users } from 'lucide-react';
+import { ArrowLeft, Pencil, Trophy, Users, ImagePlus, X } from 'lucide-react';
 import type { ChecklistItem, Destination, UserRef } from '@tripcrew/shared';
 import {
     getPlaybook,
@@ -12,6 +12,7 @@ import {
 } from '@/api/playbook.api';
 import { getTrip, updatePlaybookEditors } from '@/api/trips.api';
 import { updateDestination } from '@/api/destinations.api';
+import { uploadImages, deleteDestinationImage } from '@/api/destinations.api';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/errors';
 import { refId } from '@/utils/refs';
@@ -42,6 +43,8 @@ export default function PlaybookPage() {
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [uploadingPhotos, setUploadingPhotos] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const load = useCallback(async () => {
         try {
@@ -141,6 +144,32 @@ export default function PlaybookPage() {
         }
     }
 
+    async function handleUploadPhotos(files: FileList | null) {
+        if (!files || files.length === 0 || !winningDest) return;
+        setUploadingPhotos(true);
+        try {
+            await uploadImages(tripId, winningDest._id, Array.from(files));
+            await load();
+            toast.success('Photos uploaded.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to upload photos'));
+        } finally {
+            setUploadingPhotos(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    }
+
+    async function handleDeletePhoto(imageId: string) {
+        if (!winningDest) return;
+        try {
+            await deleteDestinationImage(tripId, winningDest._id, imageId);
+            await load();
+            toast.success('Photo deleted.');
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Failed to delete photo'));
+        }
+    }
+
     if (loading) return <PageLoader />;
     if (error)
         return (
@@ -200,6 +229,82 @@ export default function PlaybookPage() {
                             >
                                 Clear pin
                             </Button>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
+            {winningDest && (
+                <Card className="mb-4">
+                    <CardHeader className="flex-row items-center justify-between pb-3">
+                        <CardTitle className="text-lg">Photos</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        {canEdit && (
+                            <div>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp,image/gif"
+                                    multiple
+                                    className="hidden"
+                                    onChange={(e) => handleUploadPhotos(e.target.files)}
+                                />
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploadingPhotos}
+                                >
+                                    <ImagePlus className="size-3.5" />
+                                    {uploadingPhotos ? 'Uploading…' : 'Add photos'}
+                                </Button>
+                            </div>
+                        )}
+                        {winningDest.images.length === 0 ? (
+                            <p className="text-sm italic text-muted-foreground">
+                                No photos yet.
+                            </p>
+                        ) : (
+                            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                                {winningDest.images.map((img) => {
+                                    const uploaderId = refId(img.uploadedBy);
+                                    const canRemove =
+                                        canEdit ||
+                                        uploaderId === user?.id;
+                                    return (
+                                        <div
+                                            key={img._id}
+                                            className="group relative aspect-square overflow-hidden rounded-md border"
+                                        >
+                                            <a
+                                                href={img.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                <img
+                                                    src={img.url}
+                                                    alt={`${winningDest.name} photo`}
+                                                    loading="lazy"
+                                                    className="size-full object-cover"
+                                                />
+                                            </a>
+                                            {canRemove && (
+                                                <button
+                                                    type="button"
+                                                    aria-label="Delete photo"
+                                                    className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-background/80 text-muted-foreground opacity-0 shadow-sm transition hover:text-destructive group-hover:opacity-100"
+                                                    onClick={() =>
+                                                        handleDeletePhoto(img._id)
+                                                    }
+                                                >
+                                                    <X className="size-3.5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         )}
                     </CardContent>
                 </Card>

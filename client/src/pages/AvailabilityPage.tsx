@@ -77,7 +77,7 @@ export default function AvailabilityPage() {
 
     // Vote vs. browse switch (Feature 3): 'set' toggles availability on tap/drag,
     // 'navigate' only reveals who's free on a given date without changing votes.
-    const [interactionMode, setInteractionMode] = useState<InteractionMode>('set');
+    const [interactionMode, setInteractionMode] = useState<InteractionMode>('navigate');
 
     // Opt-out state (Feature 1).
     const [status, setStatus] = useState<AvailabilityStatus>('pending');

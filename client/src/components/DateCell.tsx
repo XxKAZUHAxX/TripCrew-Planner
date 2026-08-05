@@ -74,63 +74,46 @@ export default function DateCell({
             >
                 <span className="leading-none">{cell.day}</span>
             </button>
-            {!isNavigate && hasMembers && (
-                <>
-                    {/* Corner badge: shows member count. Tap to reveal who's available
-                        without triggering the drag-select on the underlying date button. */}
-                    <button
-                        type="button"
-                        aria-label={`Show who's available on ${cell.key}`}
-                        aria-expanded={isTooltipOpen}
-                        className="absolute -right-1 -top-1 z-10 flex size-3.5 items-center justify-center rounded-full border border-border bg-background text-[0.55rem] font-bold leading-none text-foreground shadow-sm"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleTooltip(cell.key);
-                        }}
-                    >
-                        {members.length}
-                    </button>
-                    <div
-                        role="tooltip"
-                        className={cn(
-                            'absolute bottom-full left-1/2 z-50 mb-1 w-max max-w-[11rem] -translate-x-1/2',
-                            'rounded-md border border-border bg-popover px-2 py-1.5 text-left',
-                            'text-[0.7rem] leading-tight text-popover-foreground shadow-md',
-                            isTooltipOpen ? 'block' : 'hidden'
-                        )}
-                    >
-                        <p className="mb-0.5 font-semibold">{members.length} available</p>
-                        <ul className="space-y-0.5">
-                            {members.map((m) => (
-                                <li key={m.id}>{m.name}</li>
-                            ))}
-                        </ul>
-                    </div>
-                </>
-            )}
-            {isNavigate && (
-                <div
-                    role="tooltip"
-                    className={cn(
-                        'absolute bottom-full left-1/2 z-50 mb-1 w-max max-w-[11rem] -translate-x-1/2',
-                        'rounded-md border border-border bg-popover px-2 py-1.5 text-left',
-                        'text-[0.7rem] leading-tight text-popover-foreground shadow-md',
-                        isTooltipOpen ? 'block' : 'hidden'
-                    )}
+            {/* Corner badge: shows member count in both viewing and voting modes.
+                Tap to reveal who's available without triggering drag-select on the
+                underlying date button. */}
+            {hasMembers && (
+                <button
+                    type="button"
+                    aria-label={`Show who's available on ${cell.key}`}
+                    aria-expanded={isTooltipOpen}
+                    className="absolute -right-1 -top-1 z-10 flex size-3.5 items-center justify-center rounded-full border border-border bg-background text-[0.55rem] font-bold leading-none text-foreground shadow-sm"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleTooltip(cell.key);
+                    }}
                 >
-                    <p className="mb-0.5 font-semibold">{members.length} available</p>
-                    {hasMembers ? (
-                        <ul className="space-y-0.5">
-                            {members.map((m) => (
-                                <li key={m.id}>{m.name}</li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="italic text-muted-foreground">No one yet.</p>
-                    )}
-                </div>
+                    {members.length}
+                </button>
             )}
+            {/* Unified tooltip — shared by both modes. In voting mode the badge
+                toggles it; in viewing mode the cell itself also toggles it. */}
+            <div
+                role="tooltip"
+                className={cn(
+                    'absolute bottom-full left-1/2 z-50 mb-1 w-max max-w-[11rem] -translate-x-1/2',
+                    'rounded-md border border-border bg-popover px-2 py-1.5 text-left',
+                    'text-[0.7rem] leading-tight text-popover-foreground shadow-md',
+                    isTooltipOpen ? 'block' : 'hidden'
+                )}
+            >
+                <p className="mb-0.5 font-semibold">{members.length} available</p>
+                {hasMembers ? (
+                    <ul className="space-y-0.5">
+                        {members.map((m) => (
+                            <li key={m.id}>{m.name}</li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="italic text-muted-foreground">No one yet.</p>
+                )}
+            </div>
         </div>
     );
 }

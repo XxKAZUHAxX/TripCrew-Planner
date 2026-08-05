@@ -25,6 +25,9 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
+# Custom folders
+supporting_images/
+
 # Prompts and notes
 notes.md
 tripcrew_agent_prompt.md
